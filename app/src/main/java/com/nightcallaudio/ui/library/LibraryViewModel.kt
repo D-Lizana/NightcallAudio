@@ -1,10 +1,13 @@
 package com.nightcallaudio.ui.library
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
+import androidx.lifecycle.ViewModel
+import androidx.lifecycle.ViewModelProvider
+import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewModelScope
-import com.nightcallaudio.data.mediastore.MediaStoreMusicRepository
+import com.nightcallaudio.domain.model.MusicLibrary
 import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.domain.usecase.GetMusicLibraryUseCase
+import com.nightcallaudio.domain.usecase.SearchTracksUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -19,25 +22,23 @@ data class LibraryUiState(
     val errorMessage: String? = null,
 )
 
-class LibraryViewModel(application: Application) : AndroidViewModel(application) {
-    private val repository = MediaStoreMusicRepository(application)
-    private val sourceTracks = MutableStateFlow<List<Track>>(emptyList())
+class LibraryViewModel(
+    private val getMusicLibrary: GetMusicLibraryUseCase,
+    private val searchTracks: SearchTracksUseCase,
+) : ViewModel() {
+    private val sourceLibrary = MutableStateFlow<MusicLibrary?>(null)
     private val loading = MutableStateFlow(false)
     private val error = MutableStateFlow<String?>(null)
     private val _query = MutableStateFlow("")
     val query: StateFlow<String> = _query.asStateFlow()
 
     val uiState: StateFlow<LibraryUiState> = combine(
-        sourceTracks,
+        sourceLibrary,
         loading,
         error,
         query,
-    ) { tracks, isLoading, errorMessage, searchQuery ->
-        val filtered = if (searchQuery.isBlank()) tracks else tracks.filter { track ->
-            track.title.contains(searchQuery, ignoreCase = true) ||
-                track.artist.contains(searchQuery, ignoreCase = true) ||
-                track.album.contains(searchQuery, ignoreCase = true)
-        }
+    ) { library, isLoading, errorMessage, searchQuery ->
+        val filtered = searchTracks(library?.tracks.orEmpty(), searchQuery)
         LibraryUiState(filtered, isLoading, errorMessage)
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
@@ -48,9 +49,9 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
         viewModelScope.launch {
             loading.value = true
             error.value = null
-            runCatching { repository.getTracks() }
+            runCatching { getMusicLibrary() }
                 .onSuccess {
-                    sourceTracks.value = it
+                    sourceLibrary.value = it
                     hasLoaded = true
                 }
                 .onFailure { error.value = "No se ha podido leer la música del dispositivo." }
@@ -60,5 +61,18 @@ class LibraryViewModel(application: Application) : AndroidViewModel(application)
 
     fun updateQuery(value: String) {
         _query.value = value
+    }
+
+    companion object {
+        fun factory(
+            getMusicLibrary: GetMusicLibraryUseCase,
+            searchTracks: SearchTracksUseCase,
+        ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
+            @Suppress("UNCHECKED_CAST")
+            override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
+                require(modelClass.isAssignableFrom(LibraryViewModel::class.java))
+                return LibraryViewModel(getMusicLibrary, searchTracks) as T
+            }
+        }
     }
 }

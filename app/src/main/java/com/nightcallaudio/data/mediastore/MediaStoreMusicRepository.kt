@@ -31,7 +31,9 @@ class MediaStoreMusicRepository(
             MediaStore.Audio.Media._ID,
             MediaStore.Audio.Media.TITLE,
             MediaStore.Audio.Media.ARTIST,
+            MediaStore.Audio.Media.ARTIST_ID,
             MediaStore.Audio.Media.ALBUM,
+            MediaStore.Audio.Media.ALBUM_ID,
             MediaStore.Audio.Media.DURATION,
             MediaStore.Audio.Media.TRACK,
             locationColumn,
@@ -45,7 +47,9 @@ class MediaStoreMusicRepository(
             val idIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media._ID)
             val titleIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TITLE)
             val artistIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST)
+            val artistIdIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ARTIST_ID)
             val albumIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM)
+            val albumIdIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.ALBUM_ID)
             val durationIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.DURATION)
             val trackIndex = cursor.getColumnIndexOrThrow(MediaStore.Audio.Media.TRACK)
             val locationIndex = cursor.getColumnIndexOrThrow(locationColumn)
@@ -57,20 +61,25 @@ class MediaStoreMusicRepository(
                     if (!AudioInclusionPolicy.shouldInclude(durationMs, location)) continue
 
                     val id = cursor.getLong(idIndex)
+                    val encodedTrackNumber = cursor.getInt(trackIndex)
                     add(
                         Track(
                             id = id,
-                            uri = ContentUris.withAppendedId(collection, id),
+                            contentUri = ContentUris.withAppendedId(collection, id).toString(),
                             title = cursor.getString(titleIndex).orUnknown("Título desconocido"),
                             artist = cursor.getString(artistIndex).orUnknown("Artista desconocido"),
+                            artistId = cursor.getLong(artistIdIndex).takeIf { it > 0 },
                             album = cursor.getString(albumIndex).orUnknown("Álbum desconocido"),
+                            albumId = cursor.getLong(albumIdIndex).takeIf { it > 0 },
                             durationMs = durationMs,
-                            trackNumber = cursor.getInt(trackIndex).takeIf { it > 0 }?.rem(1_000),
+                            trackNumber = encodedTrackNumber.takeIf { it > 0 }?.rem(1_000),
+                            discNumber = encodedTrackNumber.takeIf { it >= 1_000 }?.div(1_000),
+                            genre = null,
                             folder = location?.folderName(),
                         ),
                     )
                 }
-            }.distinctBy(Track::uri)
+            }.distinctBy(Track::contentUri)
         }.orEmpty()
     }
 

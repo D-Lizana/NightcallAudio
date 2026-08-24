@@ -27,7 +27,6 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.nightcallaudio.domain.model.Track
-import com.nightcallaudio.playback.PlaybackController
 import com.nightcallaudio.ui.library.LibraryUiState
 import com.nightcallaudio.ui.library.LibraryViewModel
 import com.nightcallaudio.ui.theme.NightcallAudioTheme
@@ -42,8 +41,14 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-private fun NightcallAudioApp(viewModel: LibraryViewModel = viewModel()) {
+private fun NightcallAudioApp() {
     val context = LocalContext.current
+    val container = remember {
+        (context.applicationContext as NightcallAudioApplication).container
+    }
+    val viewModel: LibraryViewModel = viewModel(
+        factory = LibraryViewModel.factory(container.getMusicLibrary, container.searchTracks),
+    )
     val permission = remember { audioPermission() }
     var hasPermission by remember {
         mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
@@ -52,9 +57,6 @@ private fun NightcallAudioApp(viewModel: LibraryViewModel = viewModel()) {
         hasPermission = granted
         if (granted) viewModel.loadMusic()
     }
-    val playbackController = remember { PlaybackController(context) }
-    DisposableEffect(playbackController) { onDispose(playbackController::close) }
-
     if (hasPermission) {
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
         val query by viewModel.query.collectAsStateWithLifecycle()
@@ -64,7 +66,7 @@ private fun NightcallAudioApp(viewModel: LibraryViewModel = viewModel()) {
             query = query,
             onQueryChange = viewModel::updateQuery,
             onRefresh = { viewModel.loadMusic(force = true) },
-            onTrackClick = { index -> playbackController.play(uiState.tracks, index) },
+            onTrackClick = { index -> container.playbackRepository.play(uiState.tracks, index) },
         )
     } else {
         PermissionScreen { permissionLauncher.launch(permission) }

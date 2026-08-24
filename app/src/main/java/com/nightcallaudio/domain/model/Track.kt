@@ -1,14 +1,16 @@
 package com.nightcallaudio.domain.model
 
-import android.net.Uri
-
 data class Track(
     val id: Long,
-    val uri: Uri,
+    val contentUri: String,
     val title: String,
     val artist: String,
+    val artistId: Long?,
     val album: String,
+    val albumId: Long?,
     val durationMs: Long,
     val trackNumber: Int?,
+    val discNumber: Int?,
+    val genre: String?,
     val folder: String?,
 )
