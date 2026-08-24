@@ -11,4 +11,5 @@
     <string name="queue_title">Cola de reproducción</string>
     <string name="playback_notification_channel">Reproducción multimedia</string>
     <string name="stop_playback_session">Detener</string>
+    <string name="widget_description">Controla la reproducción de NightcallAudio</string>
 </resources>

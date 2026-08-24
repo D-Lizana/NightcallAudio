@@ -20,6 +20,7 @@ import com.nightcallaudio.domain.repository.PersistedPlaybackSession
 import com.nightcallaudio.domain.usecase.PreviousAction
 import com.nightcallaudio.domain.usecase.PreviousButtonPolicy
 import com.nightcallaudio.domain.usecase.RestorePlaybackSessionUseCase
+import com.nightcallaudio.widget.PlaybackWidgetUpdater
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -37,6 +38,8 @@ class PlaybackController(
     private var restorationRequested = false
     private var lastPositionSaveElapsedMs = 0L
     private val restorePlaybackSession = RestorePlaybackSessionUseCase()
+    private var pendingRestoredCommand: PendingRestoredCommand? = null
+    private var lastWidgetSnapshot: WidgetSnapshot? = null
     private val queueOrder = QueueOrderManager()
     private val controllerFuture: ListenableFuture<MediaController> = MediaController.Builder(
         applicationContext,
@@ -86,7 +89,10 @@ class PlaybackController(
         }
     }
 
-    override fun play() = withController(MediaController::play)
+    override fun play() = withController { controller ->
+        if (queueOrder.tracks.isEmpty()) pendingRestoredCommand = PendingRestoredCommand.PLAY
+        else controller.play()
+    }
 
     override fun pause() = withController { controller ->
         controller.pause()
@@ -105,10 +111,15 @@ class PlaybackController(
     override fun seekForward() = withController(MediaController::seekForward)
 
     override fun skipToNext() = withController { controller ->
-        if (controller.hasNextMediaItem()) controller.seekToNextMediaItem()
+        if (queueOrder.tracks.isEmpty()) pendingRestoredCommand = PendingRestoredCommand.NEXT
+        else if (controller.hasNextMediaItem()) controller.seekToNextMediaItem()
     }
 
     override fun skipToPrevious() = withController { controller ->
+        if (queueOrder.tracks.isEmpty()) {
+            pendingRestoredCommand = PendingRestoredCommand.PREVIOUS
+            return@withController
+        }
         when (PreviousButtonPolicy.action(controller.currentPosition)) {
             PreviousAction.RESTART_CURRENT -> controller.seekTo(0L)
             PreviousAction.PLAY_PREVIOUS -> {
@@ -201,6 +212,13 @@ class PlaybackController(
                     repeatMode = session.repeatMode,
                     status = PlaybackStatus.BUFFERING,
                 )
+                when (pendingRestoredCommand) {
+                    PendingRestoredCommand.PLAY -> controller.play()
+                    PendingRestoredCommand.NEXT -> if (controller.hasNextMediaItem()) controller.seekToNextMediaItem()
+                    PendingRestoredCommand.PREVIOUS -> if (controller.hasPreviousMediaItem()) controller.seekToPreviousMediaItem()
+                    null -> Unit
+                }
+                pendingRestoredCommand = null
             }
         }
     }
@@ -210,6 +228,7 @@ class PlaybackController(
         controller.clearMediaItems()
         queueOrder.replace(emptyList())
         _state.value = PlaybackState()
+        updateWidgetIfNeeded()
         persistSession(delayMs = 0)
     }
 
@@ -254,6 +273,7 @@ class PlaybackController(
             status = player.playbackState.toDomainStatus(),
             errorMessage = player.playerError?.message,
         )
+        updateWidgetIfNeeded()
     }
 
     private fun publishQueueState(player: Player) {
@@ -262,6 +282,15 @@ class PlaybackController(
             currentIndex = player.currentMediaItemIndex.takeIf { it != C.INDEX_UNSET } ?: -1,
             shuffleEnabled = queueOrder.shuffleEnabled,
         )
+        updateWidgetIfNeeded()
+    }
+
+    private fun updateWidgetIfNeeded() {
+        val playback = _state.value
+        val snapshot = WidgetSnapshot(playback.currentTrack?.id, playback.currentTrack?.title, playback.currentTrack?.artist, playback.isPlaying)
+        if (snapshot == lastWidgetSnapshot) return
+        lastWidgetSnapshot = snapshot
+        PlaybackWidgetUpdater.updateAll(applicationContext, playback)
     }
 
     private fun persistPositionIfDue() {
@@ -339,4 +368,7 @@ class PlaybackController(
         const val POSITION_SAVE_INTERVAL_MS = 5_000L
         const val PERSISTENCE_DEBOUNCE_MS = 250L
     }
+
+    private enum class PendingRestoredCommand { PLAY, PREVIOUS, NEXT }
+    private data class WidgetSnapshot(val trackId: Long?, val title: String?, val artist: String?, val isPlaying: Boolean)
 }
