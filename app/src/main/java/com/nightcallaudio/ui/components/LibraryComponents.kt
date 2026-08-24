@@ -8,6 +8,8 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MusicNote
 import androidx.compose.material.icons.rounded.MoreVert
+import androidx.compose.material.icons.rounded.Favorite
+import androidx.compose.material.icons.rounded.FavoriteBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -22,6 +24,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.domain.model.Playlist
 import java.util.Locale
 
 @Composable
@@ -31,6 +34,10 @@ fun TrackList(
     modifier: Modifier = Modifier,
     onPlayNext: ((Track) -> Unit)? = null,
     onAddToQueue: ((Track) -> Unit)? = null,
+    isFavorite: ((Track) -> Boolean)? = null,
+    onToggleFavorite: ((Track) -> Unit)? = null,
+    playlists: List<Playlist> = emptyList(),
+    onAddToPlaylist: ((Long, Track) -> Unit)? = null,
 ) {
     LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
@@ -39,6 +46,10 @@ fun TrackList(
                 onClick = { onTrackClick(index) },
                 onPlayNext = onPlayNext?.let { action -> { action(track) } },
                 onAddToQueue = onAddToQueue?.let { action -> { action(track) } },
+                isFavorite = isFavorite?.invoke(track),
+                onToggleFavorite = onToggleFavorite?.let { action -> { action(track) } },
+                playlists = playlists,
+                onAddToPlaylist = onAddToPlaylist?.let { action -> { playlistId -> action(playlistId, track) } },
             )
         }
         item { Spacer(Modifier.height(20.dp)) }
@@ -52,6 +63,10 @@ fun TrackRow(
     modifier: Modifier = Modifier,
     onPlayNext: (() -> Unit)? = null,
     onAddToQueue: (() -> Unit)? = null,
+    isFavorite: Boolean? = null,
+    onToggleFavorite: (() -> Unit)? = null,
+    playlists: List<Playlist> = emptyList(),
+    onAddToPlaylist: ((Long) -> Unit)? = null,
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Card(
@@ -89,7 +104,7 @@ fun TrackRow(
                 )
             }
             Text(formatDuration(track.durationMs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            if (onPlayNext != null || onAddToQueue != null) {
+            if (onPlayNext != null || onAddToQueue != null || onToggleFavorite != null || (playlists.isNotEmpty() && onAddToPlaylist != null)) {
                 Box {
                     IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Rounded.MoreVert, "Más opciones") }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
@@ -103,6 +118,19 @@ fun TrackRow(
                             DropdownMenuItem(
                                 text = { Text("Añadir al final de la cola") },
                                 onClick = { menuExpanded = false; onAddToQueue() },
+                            )
+                        }
+                        if (onToggleFavorite != null) {
+                            DropdownMenuItem(
+                                text = { Text(if (isFavorite == true) "Quitar de favoritos" else "Añadir a favoritos") },
+                                leadingIcon = { Icon(if (isFavorite == true) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null) },
+                                onClick = { menuExpanded = false; onToggleFavorite() },
+                            )
+                        }
+                        if (onAddToPlaylist != null) playlists.forEach { playlist ->
+                            DropdownMenuItem(
+                                text = { Text("Añadir a «${playlist.name}»") },
+                                onClick = { menuExpanded = false; onAddToPlaylist(playlist.id) },
                             )
                         }
                     }

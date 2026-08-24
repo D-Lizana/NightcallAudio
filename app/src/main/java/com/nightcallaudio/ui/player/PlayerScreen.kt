@@ -46,6 +46,8 @@ fun PlayerScreen(
     onCycleRepeat: () -> Unit,
     onSeek: (Long) -> Unit,
     onOpenQueue: () -> Unit,
+    isFavorite: Boolean,
+    onToggleFavorite: () -> Unit,
 ) {
     val track = state.currentTrack
     var isSeeking by remember { mutableStateOf(false) }
@@ -96,6 +98,13 @@ fun PlayerScreen(
             Spacer(Modifier.height(28.dp))
             Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            IconButton(onClick = onToggleFavorite) {
+                Icon(
+                    if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                    if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             Spacer(Modifier.height(20.dp))
             Slider(
                 value = sliderPosition.coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),

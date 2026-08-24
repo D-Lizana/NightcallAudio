@@ -23,6 +23,7 @@ import com.nightcallaudio.permissions.AudioPermissionState
 import com.nightcallaudio.permissions.PermissionPolicy
 import com.nightcallaudio.permissions.PermissionRequestStore
 import com.nightcallaudio.ui.library.LibraryViewModel
+import com.nightcallaudio.ui.collections.CollectionsViewModel
 import com.nightcallaudio.ui.navigation.NightcallNavigation
 import com.nightcallaudio.ui.permissions.AudioPermissionScreen
 import com.nightcallaudio.ui.theme.NightcallAudioTheme
@@ -45,6 +46,9 @@ private fun NightcallAudioApp() {
     val audioPermission = remember { PermissionPolicy.audioPermission() }
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.factory(container.getMusicLibrary, container.searchTracks, container.cleanupMissingReferences),
+    )
+    val collectionsViewModel: CollectionsViewModel = viewModel(
+        factory = CollectionsViewModel.factory(container.playlistRepository, container.favoritesRepository),
     )
 
     fun currentAudioState(): AudioPermissionState = PermissionPolicy.evaluateAudioPermission(
@@ -81,6 +85,7 @@ private fun NightcallAudioApp() {
         NightcallNavigation(
             libraryViewModel = libraryViewModel,
             playbackRepository = container.playbackRepository,
+            collectionsViewModel = collectionsViewModel,
             onPlayTracks = { tracks, index ->
                 val shouldRequestNotifications = PermissionPolicy.requiresNotificationPermission() &&
                     ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&

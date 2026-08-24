@@ -9,6 +9,7 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
 import android.net.Uri
@@ -19,6 +20,8 @@ import com.nightcallaudio.domain.repository.PlaybackRepository
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.ui.collections.FavoritesScreen
 import com.nightcallaudio.ui.collections.PlaylistsScreen
+import com.nightcallaudio.ui.collections.PlaylistDetailScreen
+import com.nightcallaudio.ui.collections.CollectionsViewModel
 import com.nightcallaudio.ui.components.MiniPlayer
 import com.nightcallaudio.ui.library.LibraryScreen
 import com.nightcallaudio.ui.library.LibraryViewModel
@@ -40,22 +43,32 @@ private val mainDestinations = listOf(
 fun NightcallNavigation(
     libraryViewModel: LibraryViewModel,
     playbackRepository: PlaybackRepository,
+    collectionsViewModel: CollectionsViewModel,
     onPlayTracks: (List<Track>, Int) -> Unit,
 ) {
     val navController = rememberNavController()
     val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
     val query by libraryViewModel.query.collectAsStateWithLifecycle()
     val playbackState by playbackRepository.state.collectAsStateWithLifecycle()
+    val collectionsState by collectionsViewModel.state.collectAsStateWithLifecycle()
+    val snackbarHostState = remember { SnackbarHostState() }
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showMainChrome = currentRoute in mainDestinations.map { it.route } ||
-        currentRoute == "artist/{artist}" || currentRoute == "album/{artist}/{album}"
+        currentRoute == "artist/{artist}" || currentRoute == "album/{artist}/{album}" || currentRoute == "playlist/{playlistId}"
 
     LaunchedEffect(libraryState.tracks) {
         if (libraryState.tracks.isNotEmpty()) playbackRepository.restoreSession(libraryState.tracks)
     }
+    LaunchedEffect(collectionsState.errorMessage) {
+        collectionsState.errorMessage?.let {
+            snackbarHostState.showSnackbar(it)
+            collectionsViewModel.clearError()
+        }
+    }
 
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbarHostState) },
         bottomBar = {
             if (showMainChrome) {
                 Column {
@@ -95,6 +108,10 @@ fun NightcallNavigation(
                     playbackRepository::addToQueue,
                     { artist -> navController.navigate("artist/${Uri.encode(artist)}") },
                     { album, artist -> navController.navigate("album/${Uri.encode(artist)}/${Uri.encode(album)}") },
+                    collectionsState.favoriteIds,
+                    collectionsState.playlists,
+                    { collectionsViewModel.toggleFavorite(it.id) },
+                    { playlistId, track -> collectionsViewModel.addTrack(playlistId, track.id) },
                 )
             }
             composable("artist/{artist}") { entry ->
@@ -108,6 +125,10 @@ fun NightcallNavigation(
                     onPlayTracks = onPlayTracks,
                     onPlayNext = playbackRepository::playNext,
                     onAddToQueue = playbackRepository::addToQueue,
+                    favoriteIds = collectionsState.favoriteIds,
+                    playlists = collectionsState.playlists,
+                    onToggleFavorite = { collectionsViewModel.toggleFavorite(it.id) },
+                    onAddToPlaylist = { playlistId, track -> collectionsViewModel.addTrack(playlistId, track.id) },
                 )
             }
             composable("album/{artist}/{album}") { entry ->
@@ -124,6 +145,10 @@ fun NightcallNavigation(
                     onPlayTracks = onPlayTracks,
                     onPlayNext = playbackRepository::playNext,
                     onAddToQueue = playbackRepository::addToQueue,
+                    favoriteIds = collectionsState.favoriteIds,
+                    playlists = collectionsState.playlists,
+                    onToggleFavorite = { collectionsViewModel.toggleFavorite(it.id) },
+                    onAddToPlaylist = { playlistId, track -> collectionsViewModel.addTrack(playlistId, track.id) },
                 )
             }
             composable("search") {
@@ -134,10 +159,41 @@ fun NightcallNavigation(
                     { index -> onPlayTracks(libraryState.searchResults, index) },
                     playbackRepository::playNext,
                     playbackRepository::addToQueue,
+                    collectionsState.favoriteIds,
+                    collectionsState.playlists,
+                    { collectionsViewModel.toggleFavorite(it.id) },
+                    { playlistId, track -> collectionsViewModel.addTrack(playlistId, track.id) },
                 )
             }
-            composable("playlists") { PlaylistsScreen() }
-            composable("favorites") { FavoritesScreen() }
+            composable("playlists") {
+                PlaylistsScreen(
+                    collectionsState,
+                    collectionsViewModel::create,
+                    collectionsViewModel::rename,
+                    collectionsViewModel::delete,
+                    { navController.navigate("playlist/$it") },
+                )
+            }
+            composable("playlist/{playlistId}") { entry ->
+                val playlistId = entry.arguments?.getString("playlistId")?.toLongOrNull() ?: -1L
+                PlaylistDetailScreen(
+                    collectionsState.playlists.firstOrNull { it.id == playlistId },
+                    navController::navigateUp,
+                    onPlayTracks,
+                    { collectionsViewModel.removeTrack(playlistId, it) },
+                    { from, to -> collectionsViewModel.moveTrack(playlistId, from, to) },
+                )
+            }
+            composable("favorites") {
+                val favoriteTracks = libraryState.tracks.filter { it.id in collectionsState.favoriteIds }
+                FavoritesScreen(
+                    favoriteTracks,
+                    onPlayTracks,
+                    collectionsViewModel::toggleFavorite,
+                    playbackRepository::playNext,
+                    playbackRepository::addToQueue,
+                )
+            }
             composable("player") {
                 PlayerScreen(
                     playbackState,
@@ -159,6 +215,8 @@ fun NightcallNavigation(
                     },
                     playbackRepository::seekTo,
                     { navController.navigate("queue") },
+                    playbackState.currentTrack?.id in collectionsState.favoriteIds,
+                    { playbackState.currentTrack?.let { collectionsViewModel.toggleFavorite(it.id) } },
                 )
             }
             composable("queue") {

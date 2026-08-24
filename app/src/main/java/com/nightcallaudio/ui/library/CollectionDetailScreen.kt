@@ -14,6 +14,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.domain.model.Playlist
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 
@@ -27,6 +28,10 @@ fun CollectionDetailScreen(
     onPlayTracks: (List<Track>, Int) -> Unit,
     onPlayNext: (Track) -> Unit,
     onAddToQueue: (Track) -> Unit,
+    favoriteIds: Set<Long>,
+    playlists: List<Playlist>,
+    onToggleFavorite: (Track) -> Unit,
+    onAddToPlaylist: (Long, Track) -> Unit,
 ) {
     Scaffold(
         topBar = {
@@ -54,6 +59,10 @@ fun CollectionDetailScreen(
                 modifier = Modifier.padding(padding).padding(horizontal = 16.dp),
                 onPlayNext = onPlayNext,
                 onAddToQueue = onAddToQueue,
+                isFavorite = { it.id in favoriteIds },
+                onToggleFavorite = onToggleFavorite,
+                playlists = playlists,
+                onAddToPlaylist = onAddToPlaylist,
             )
         }
     }

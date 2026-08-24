@@ -14,6 +14,7 @@ import androidx.compose.ui.unit.dp
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.domain.model.Playlist
 
 private enum class LibrarySection(val label: String) {
     TRACKS("Canciones"),
@@ -33,6 +34,10 @@ fun LibraryScreen(
     onAddToQueue: (Track) -> Unit,
     onOpenArtist: (String) -> Unit,
     onOpenAlbum: (String, String) -> Unit,
+    favoriteIds: Set<Long>,
+    playlists: List<Playlist>,
+    onToggleFavorite: (Track) -> Unit,
+    onAddToPlaylist: (Long, Track) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -72,6 +77,7 @@ fun LibraryScreen(
                 Modifier.padding(horizontal = 16.dp),
                 onPlayNext,
                 onAddToQueue,
+                { it.id in favoriteIds }, onToggleFavorite, playlists, onAddToPlaylist,
             )
             selectedCategory != null -> {
                 val categoryTracks = state.tracks.forCategory(section, selectedCategory.orEmpty())
@@ -85,6 +91,7 @@ fun LibraryScreen(
                         Modifier.padding(horizontal = 16.dp),
                         onPlayNext,
                         onAddToQueue,
+                        { it.id in favoriteIds }, onToggleFavorite, playlists, onAddToPlaylist,
                     )
                 }
             }
