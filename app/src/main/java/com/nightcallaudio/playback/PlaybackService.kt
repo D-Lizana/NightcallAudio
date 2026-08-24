@@ -1,8 +1,6 @@
 package com.nightcallaudio.playback
 
 import android.content.Intent
-import androidx.media3.common.AudioAttributes
-import androidx.media3.common.C
 import androidx.media3.common.PlaybackException
 import androidx.media3.common.Player
 import androidx.media3.exoplayer.ExoPlayer
@@ -23,13 +21,10 @@ class PlaybackService : MediaSessionService() {
             .setSeekForwardIncrementMs(SEEK_INCREMENT_MS)
             .build().apply {
             setAudioAttributes(
-                AudioAttributes.Builder()
-                    .setUsage(C.USAGE_MEDIA)
-                    .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
-                    .build(),
-                true,
+                MusicAudioConfiguration.audioAttributes,
+                MusicAudioConfiguration.HANDLE_AUDIO_FOCUS,
             )
-            setHandleAudioBecomingNoisy(true)
+            setHandleAudioBecomingNoisy(MusicAudioConfiguration.PAUSE_WHEN_AUDIO_BECOMES_NOISY)
             addListener(object : Player.Listener {
                 override fun onPlayerError(error: PlaybackException) {
                     when (PlaybackFailurePolicy.action(hasNextMediaItem())) {
