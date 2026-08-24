@@ -3,4 +3,10 @@
     <string name="permission_audio_title">Acceso a tu música</string>
     <string name="permission_audio_message">NightcallAudio necesita permiso para encontrar y reproducir los archivos de audio del dispositivo.</string>
     <string name="permission_audio_action">Permitir acceso</string>
+    <string name="navigation_library">Biblioteca</string>
+    <string name="navigation_search">Buscar</string>
+    <string name="navigation_playlists">Playlists</string>
+    <string name="navigation_favorites">Favoritos</string>
+    <string name="player_title">Reproduciendo</string>
+    <string name="queue_title">Cola de reproducción</string>
 </resources>
