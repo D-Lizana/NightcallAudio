@@ -8,6 +8,7 @@ class NightcallAudioApplication : Application() {
 
     override fun onTerminate() {
         container.playbackRepository.close()
+        container.database.close()
         super.onTerminate()
     }
 }

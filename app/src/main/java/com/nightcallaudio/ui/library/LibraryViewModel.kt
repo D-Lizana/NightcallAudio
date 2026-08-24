@@ -8,6 +8,7 @@ import com.nightcallaudio.domain.model.MusicLibrary
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.usecase.GetMusicLibraryUseCase
 import com.nightcallaudio.domain.usecase.SearchTracksUseCase
+import com.nightcallaudio.domain.usecase.CleanupMissingReferencesUseCase
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -31,6 +32,7 @@ data class LibraryUiState(
 class LibraryViewModel(
     private val getMusicLibrary: GetMusicLibraryUseCase,
     private val searchTracks: SearchTracksUseCase,
+    private val cleanupMissingReferences: CleanupMissingReferencesUseCase,
 ) : ViewModel() {
     private val sourceLibrary = MutableStateFlow<MusicLibrary?>(null)
     private val loading = MutableStateFlow(false)
@@ -64,6 +66,7 @@ class LibraryViewModel(
                 }
                 .onEach { library ->
                     sourceLibrary.value = library
+                    cleanupMissingReferences(library.tracks.mapTo(mutableSetOf()) { it.id })
                     loading.value = false
                     error.value = null
                 }
@@ -94,11 +97,12 @@ class LibraryViewModel(
         fun factory(
             getMusicLibrary: GetMusicLibraryUseCase,
             searchTracks: SearchTracksUseCase,
+            cleanupMissingReferences: CleanupMissingReferencesUseCase,
         ): ViewModelProvider.Factory = object : ViewModelProvider.Factory {
             @Suppress("UNCHECKED_CAST")
             override fun <T : ViewModel> create(modelClass: Class<T>, extras: CreationExtras): T {
                 require(modelClass.isAssignableFrom(LibraryViewModel::class.java))
-                return LibraryViewModel(getMusicLibrary, searchTracks) as T
+                return LibraryViewModel(getMusicLibrary, searchTracks, cleanupMissingReferences) as T
             }
         }
     }

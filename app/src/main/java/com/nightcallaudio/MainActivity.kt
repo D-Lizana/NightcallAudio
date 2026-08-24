@@ -44,7 +44,7 @@ private fun NightcallAudioApp() {
     val requestStore = remember { PermissionRequestStore(context) }
     val audioPermission = remember { PermissionPolicy.audioPermission() }
     val libraryViewModel: LibraryViewModel = viewModel(
-        factory = LibraryViewModel.factory(container.getMusicLibrary, container.searchTracks),
+        factory = LibraryViewModel.factory(container.getMusicLibrary, container.searchTracks, container.cleanupMissingReferences),
     )
 
     fun currentAudioState(): AudioPermissionState = PermissionPolicy.evaluateAudioPermission(
