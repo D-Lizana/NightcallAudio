@@ -8,6 +8,8 @@ import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackRow
 import com.nightcallaudio.ui.theme.NightcallAudioTheme
+import com.nightcallaudio.permissions.AudioPermissionState
+import com.nightcallaudio.ui.permissions.AudioPermissionScreen
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -59,5 +61,21 @@ class VisualComponentsTest {
         composeRule.onNodeWithText("Nightcall").assertIsDisplayed()
         composeRule.onNodeWithText("Kavinsky · OutRun").assertIsDisplayed()
         composeRule.onNodeWithText("4:17").assertIsDisplayed()
+    }
+
+    @Test
+    fun permisoPermanenteOfreceAbrirAjustes() {
+        composeRule.setContent {
+            NightcallAudioTheme {
+                AudioPermissionScreen(
+                    state = AudioPermissionState.PERMANENTLY_DENIED,
+                    onRequestPermission = {},
+                    onOpenSettings = {},
+                )
+            }
+        }
+
+        composeRule.onNodeWithText("Activa el acceso desde Ajustes").assertIsDisplayed()
+        composeRule.onNodeWithText("Abrir Ajustes").assertIsDisplayed()
     }
 }

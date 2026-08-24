@@ -14,6 +14,7 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
 import com.nightcallaudio.domain.repository.PlaybackRepository
+import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.ui.collections.FavoritesScreen
 import com.nightcallaudio.ui.collections.PlaylistsScreen
 import com.nightcallaudio.ui.components.MiniPlayer
@@ -36,6 +37,7 @@ private val mainDestinations = listOf(
 fun NightcallNavigation(
     libraryViewModel: LibraryViewModel,
     playbackRepository: PlaybackRepository,
+    onPlayTracks: (List<Track>, Int) -> Unit,
 ) {
     val navController = rememberNavController()
     val libraryState by libraryViewModel.uiState.collectAsStateWithLifecycle()
@@ -77,10 +79,10 @@ fun NightcallNavigation(
     ) { outerPadding ->
         NavHost(navController = navController, startDestination = "library", modifier = Modifier.padding(outerPadding)) {
             composable("library") {
-                LibraryScreen(libraryState, { libraryViewModel.loadMusic(true) }) { index -> playbackRepository.play(libraryState.tracks, index) }
+                LibraryScreen(libraryState, { libraryViewModel.loadMusic(true) }) { index -> onPlayTracks(libraryState.tracks, index) }
             }
             composable("search") {
-                SearchScreen(libraryState, query, libraryViewModel::updateQuery) { index -> playbackRepository.play(libraryState.tracks, index) }
+                SearchScreen(libraryState, query, libraryViewModel::updateQuery) { index -> onPlayTracks(libraryState.tracks, index) }
             }
             composable("playlists") { PlaylistsScreen() }
             composable("favorites") { FavoritesScreen() }
@@ -96,7 +98,7 @@ fun NightcallNavigation(
                 )
             }
             composable("queue") {
-                QueueScreen(playbackState, navController::navigateUp) { index -> playbackRepository.play(playbackState.queue, index) }
+                QueueScreen(playbackState, navController::navigateUp) { index -> onPlayTracks(playbackState.queue, index) }
             }
         }
     }

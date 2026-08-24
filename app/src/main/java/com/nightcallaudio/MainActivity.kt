@@ -1,27 +1,30 @@
 package com.nightcallaudio
 
 import android.Manifest
+import android.content.Intent
 import android.content.pm.PackageManager
-import android.os.Build
+import android.net.Uri
 import android.os.Bundle
+import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.*
-import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.permissions.AudioPermissionState
+import com.nightcallaudio.permissions.PermissionPolicy
+import com.nightcallaudio.permissions.PermissionRequestStore
 import com.nightcallaudio.ui.library.LibraryViewModel
 import com.nightcallaudio.ui.navigation.NightcallNavigation
+import com.nightcallaudio.ui.permissions.AudioPermissionScreen
 import com.nightcallaudio.ui.theme.NightcallAudioTheme
 
 class MainActivity : ComponentActivity() {
@@ -35,46 +38,77 @@ class MainActivity : ComponentActivity() {
 @Composable
 private fun NightcallAudioApp() {
     val context = LocalContext.current
+    val activity = context as ComponentActivity
+    val lifecycleOwner = LocalLifecycleOwner.current
     val container = remember { (context.applicationContext as NightcallAudioApplication).container }
+    val requestStore = remember { PermissionRequestStore(context) }
+    val audioPermission = remember { PermissionPolicy.audioPermission() }
     val libraryViewModel: LibraryViewModel = viewModel(
         factory = LibraryViewModel.factory(container.getMusicLibrary, container.searchTracks),
     )
-    val permission = remember { audioPermission() }
-    var hasPermission by remember {
-        mutableStateOf(ContextCompat.checkSelfPermission(context, permission) == PackageManager.PERMISSION_GRANTED)
+
+    fun currentAudioState(): AudioPermissionState = PermissionPolicy.evaluateAudioPermission(
+        granted = ContextCompat.checkSelfPermission(context, audioPermission) == PackageManager.PERMISSION_GRANTED,
+        wasRequested = requestStore.audioWasRequested,
+        shouldShowRationale = activity.shouldShowRequestPermissionRationale(audioPermission),
+    )
+
+    var audioState by remember { mutableStateOf(currentAudioState()) }
+    var pendingPlayback by remember { mutableStateOf<Pair<List<Track>, Int>?>(null) }
+
+    val audioLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        audioState = currentAudioState()
+        if (audioState == AudioPermissionState.GRANTED) libraryViewModel.loadMusic(force = true)
     }
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
-        hasPermission = granted
-        if (granted) libraryViewModel.loadMusic()
+    val notificationLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
+        pendingPlayback?.let { (tracks, index) -> container.playbackRepository.play(tracks, index) }
+        pendingPlayback = null
     }
 
-    if (hasPermission) {
-        LaunchedEffect(Unit) { libraryViewModel.loadMusic() }
-        NightcallNavigation(libraryViewModel, container.playbackRepository)
-    } else {
-        PermissionScreen { launcher.launch(permission) }
-    }
-}
-
-@Composable
-private fun PermissionScreen(onRequestPermission: () -> Unit) {
-    Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
-        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-            Text(
-                stringResource(R.string.permission_audio_title),
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.Bold,
-            )
-            Spacer(Modifier.height(12.dp))
-            Text(stringResource(R.string.permission_audio_message), style = MaterialTheme.typography.bodyLarge)
-            Spacer(Modifier.height(24.dp))
-            Button(onClick = onRequestPermission) { Text(stringResource(R.string.permission_audio_action)) }
+    DisposableEffect(lifecycleOwner, audioPermission) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                audioState = currentAudioState()
+                if (audioState == AudioPermissionState.GRANTED) libraryViewModel.loadMusic()
+            }
         }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
-}
 
-private fun audioPermission(): String = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-    Manifest.permission.READ_MEDIA_AUDIO
-} else {
-    Manifest.permission.READ_EXTERNAL_STORAGE
+    if (audioState == AudioPermissionState.GRANTED) {
+        LaunchedEffect(Unit) { libraryViewModel.loadMusic() }
+        NightcallNavigation(
+            libraryViewModel = libraryViewModel,
+            playbackRepository = container.playbackRepository,
+            onPlayTracks = { tracks, index ->
+                val shouldRequestNotifications = PermissionPolicy.requiresNotificationPermission() &&
+                    ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED &&
+                    !requestStore.notificationsWereRequested
+                if (shouldRequestNotifications) {
+                    requestStore.notificationsWereRequested = true
+                    pendingPlayback = tracks to index
+                    notificationLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+                } else {
+                    container.playbackRepository.play(tracks, index)
+                }
+            },
+        )
+    } else {
+        AudioPermissionScreen(
+            state = audioState,
+            onRequestPermission = {
+                requestStore.audioWasRequested = true
+                audioLauncher.launch(audioPermission)
+            },
+            onOpenSettings = {
+                context.startActivity(
+                    Intent(
+                        Settings.ACTION_APPLICATION_DETAILS_SETTINGS,
+                        Uri.fromParts("package", context.packageName, null),
+                    ),
+                )
+            },
+        )
+    }
 }
