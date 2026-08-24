@@ -11,6 +11,9 @@ interface PlaybackRepository : AutoCloseable {
     fun play()
     fun pause()
     fun seekTo(positionMs: Long)
+    fun seekBack()
+    fun seekForward()
     fun skipToNext()
     fun skipToPrevious()
+    fun stop()
 }

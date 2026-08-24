@@ -16,6 +16,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.PlaybackState
+import com.nightcallaudio.domain.model.PlaybackStatus
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 import com.nightcallaudio.ui.components.formatDuration
@@ -28,6 +29,8 @@ fun PlayerScreen(
     onPlayPause: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
+    onSeekBack: () -> Unit,
+    onSeekForward: () -> Unit,
     onSeek: (Long) -> Unit,
     onOpenQueue: () -> Unit,
 ) {
@@ -82,12 +85,22 @@ fun PlayerScreen(
                 Text(formatDuration(state.durationMs), style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(12.dp))
-            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(22.dp)) {
-                IconButton(onClick = onPrevious, modifier = Modifier.size(56.dp)) { Icon(Icons.Rounded.SkipPrevious, "Anterior", modifier = Modifier.size(34.dp)) }
+            state.errorMessage?.let {
+                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
+                Spacer(Modifier.height(8.dp))
+            }
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly, modifier = Modifier.fillMaxWidth()) {
+                IconButton(onClick = onPrevious) { Icon(Icons.Rounded.SkipPrevious, "Anterior") }
+                IconButton(onClick = onSeekBack) { Icon(Icons.Rounded.Replay10, "Retroceder 10 segundos") }
                 FilledIconButton(onClick = onPlayPause, modifier = Modifier.size(72.dp)) {
-                    Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pausar" else "Reproducir", modifier = Modifier.size(42.dp))
+                    if (state.status == PlaybackStatus.BUFFERING) {
+                        CircularProgressIndicator(Modifier.size(30.dp), color = MaterialTheme.colorScheme.onPrimary)
+                    } else {
+                        Icon(if (state.isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow, if (state.isPlaying) "Pausar" else "Reproducir", modifier = Modifier.size(42.dp))
+                    }
                 }
-                IconButton(onClick = onNext, modifier = Modifier.size(56.dp)) { Icon(Icons.Rounded.SkipNext, "Siguiente", modifier = Modifier.size(34.dp)) }
+                IconButton(onClick = onSeekForward) { Icon(Icons.Rounded.Forward10, "Avanzar 10 segundos") }
+                IconButton(onClick = onNext) { Icon(Icons.Rounded.SkipNext, "Siguiente") }
             }
         }
     }

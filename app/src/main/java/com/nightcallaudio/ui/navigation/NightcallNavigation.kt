@@ -93,6 +93,8 @@ fun NightcallNavigation(
                     { if (playbackState.isPlaying) playbackRepository.pause() else playbackRepository.play() },
                     playbackRepository::skipToPrevious,
                     playbackRepository::skipToNext,
+                    playbackRepository::seekBack,
+                    playbackRepository::seekForward,
                     playbackRepository::seekTo,
                     { navController.navigate("queue") },
                 )

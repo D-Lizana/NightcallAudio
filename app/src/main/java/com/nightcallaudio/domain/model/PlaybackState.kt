@@ -6,6 +6,13 @@ enum class RepeatMode {
     ONE,
 }
 
+enum class PlaybackStatus {
+    IDLE,
+    BUFFERING,
+    READY,
+    ENDED,
+}
+
 data class PlaybackState(
     val queue: List<Track> = emptyList(),
     val currentIndex: Int = -1,
@@ -14,6 +21,8 @@ data class PlaybackState(
     val isPlaying: Boolean = false,
     val shuffleEnabled: Boolean = false,
     val repeatMode: RepeatMode = RepeatMode.OFF,
+    val status: PlaybackStatus = PlaybackStatus.IDLE,
+    val errorMessage: String? = null,
 ) {
     val currentTrack: Track?
         get() = queue.getOrNull(currentIndex)

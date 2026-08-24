@@ -36,6 +36,10 @@ class FakePlaybackRepository : PlaybackRepository {
         mutableState.value = mutableState.value.copy(positionMs = positionMs)
     }
 
+    override fun seekBack() = seekTo((mutableState.value.positionMs - 10_000).coerceAtLeast(0))
+
+    override fun seekForward() = seekTo(mutableState.value.positionMs + 10_000)
+
     override fun skipToNext() {
         val next = (mutableState.value.currentIndex + 1).coerceAtMost(mutableState.value.queue.lastIndex)
         mutableState.value = mutableState.value.copy(currentIndex = next)
@@ -44,6 +48,10 @@ class FakePlaybackRepository : PlaybackRepository {
     override fun skipToPrevious() {
         val previous = (mutableState.value.currentIndex - 1).coerceAtLeast(0)
         mutableState.value = mutableState.value.copy(currentIndex = previous)
+    }
+
+    override fun stop() {
+        mutableState.value = PlaybackState()
     }
 
     override fun close() = Unit
