@@ -1,6 +1,8 @@
 package com.nightcallaudio.ui.player
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
@@ -8,6 +10,11 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -17,6 +24,7 @@ import androidx.compose.ui.layout.ContentScale
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.PlaybackState
 import com.nightcallaudio.domain.model.PlaybackStatus
+import com.nightcallaudio.domain.model.RepeatMode
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 import com.nightcallaudio.ui.components.formatDuration
@@ -31,6 +39,8 @@ fun PlayerScreen(
     onNext: () -> Unit,
     onSeekBack: () -> Unit,
     onSeekForward: () -> Unit,
+    onToggleShuffle: () -> Unit,
+    onCycleRepeat: () -> Unit,
     onSeek: (Long) -> Unit,
     onOpenQueue: () -> Unit,
 ) {
@@ -85,6 +95,26 @@ fun PlayerScreen(
                 Text(formatDuration(state.durationMs), style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(12.dp))
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
+                IconButton(onClick = onToggleShuffle) {
+                    Icon(
+                        Icons.Rounded.Shuffle,
+                        "Reproducción aleatoria",
+                        tint = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                IconButton(onClick = onCycleRepeat) {
+                    Icon(
+                        if (state.repeatMode == RepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+                        when (state.repeatMode) {
+                            RepeatMode.OFF -> "Activar repetición de cola"
+                            RepeatMode.ALL -> "Activar repetición de canción"
+                            RepeatMode.ONE -> "Desactivar repetición"
+                        },
+                        tint = if (state.repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                    )
+                }
+            }
             state.errorMessage?.let {
                 Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
                 Spacer(Modifier.height(8.dp))
@@ -108,7 +138,13 @@ fun PlayerScreen(
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun QueueScreen(state: PlaybackState, onBack: () -> Unit, onTrackClick: (Int) -> Unit) {
+fun QueueScreen(
+    state: PlaybackState,
+    onBack: () -> Unit,
+    onTrackClick: (Int) -> Unit,
+    onRemove: (Int) -> Unit,
+    onMove: (Int, Int) -> Unit,
+) {
     Scaffold(
         topBar = {
             TopAppBar(
@@ -120,7 +156,56 @@ fun QueueScreen(state: PlaybackState, onBack: () -> Unit, onTrackClick: (Int) ->
         if (state.queue.isEmpty()) {
             MessageState("La cola está vacía", "Selecciona música para empezar.", Modifier.padding(padding))
         } else {
-            TrackList(state.queue, onTrackClick, Modifier.padding(padding).padding(horizontal = 16.dp))
+            androidx.compose.foundation.lazy.LazyColumn(
+                Modifier.padding(padding).padding(horizontal = 16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                items(state.queue.size, key = { index -> "$index-${state.queue[index].id}" }) { index ->
+                    val dismissState = rememberSwipeToDismissBoxState()
+                    LaunchedEffect(dismissState.currentValue) {
+                        if (dismissState.currentValue == SwipeToDismissBoxValue.EndToStart) {
+                            onRemove(index)
+                            dismissState.snapTo(SwipeToDismissBoxValue.Settled)
+                        }
+                    }
+                    var draggedY by remember { mutableFloatStateOf(0f) }
+                    SwipeToDismissBox(
+                        state = dismissState,
+                        enableDismissFromStartToEnd = false,
+                        backgroundContent = {
+                            Box(Modifier.fillMaxSize().padding(end = 20.dp), contentAlignment = Alignment.CenterEnd) {
+                                Icon(Icons.Rounded.Delete, "Eliminar de la cola", tint = MaterialTheme.colorScheme.error)
+                            }
+                        },
+                    ) {
+                        com.nightcallaudio.ui.components.TrackRow(
+                            track = state.queue[index],
+                            onClick = { onTrackClick(index) },
+                            modifier = Modifier.pointerInput(index, state.queue.size) {
+                                detectDragGesturesAfterLongPress(
+                                    onDragEnd = { draggedY = 0f },
+                                    onDragCancel = { draggedY = 0f },
+                                ) { change, dragAmount ->
+                                    change.consume()
+                                    draggedY += dragAmount.y
+                                    val threshold = 52.dp.toPx()
+                                    when {
+                                        draggedY > threshold && index < state.queue.lastIndex -> {
+                                            onMove(index, index + 1)
+                                            draggedY = 0f
+                                        }
+                                        draggedY < -threshold && index > 0 -> {
+                                            onMove(index, index - 1)
+                                            draggedY = 0f
+                                        }
+                                    }
+                                }
+                            },
+                        )
+                    }
+                }
+                item { Spacer(Modifier.height(20.dp)) }
+            }
         }
     }
 }

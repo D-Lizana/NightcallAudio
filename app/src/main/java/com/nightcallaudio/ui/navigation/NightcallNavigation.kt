@@ -79,10 +79,23 @@ fun NightcallNavigation(
     ) { outerPadding ->
         NavHost(navController = navController, startDestination = "library", modifier = Modifier.padding(outerPadding)) {
             composable("library") {
-                LibraryScreen(libraryState, { libraryViewModel.loadMusic(true) }, onPlayTracks)
+                LibraryScreen(
+                    libraryState,
+                    { libraryViewModel.loadMusic(true) },
+                    onPlayTracks,
+                    playbackRepository::playNext,
+                    playbackRepository::addToQueue,
+                )
             }
             composable("search") {
-                SearchScreen(libraryState, query, libraryViewModel::updateQuery) { index -> onPlayTracks(libraryState.searchResults, index) }
+                SearchScreen(
+                    libraryState,
+                    query,
+                    libraryViewModel::updateQuery,
+                    { index -> onPlayTracks(libraryState.searchResults, index) },
+                    playbackRepository::playNext,
+                    playbackRepository::addToQueue,
+                )
             }
             composable("playlists") { PlaylistsScreen() }
             composable("favorites") { FavoritesScreen() }
@@ -95,12 +108,28 @@ fun NightcallNavigation(
                     playbackRepository::skipToNext,
                     playbackRepository::seekBack,
                     playbackRepository::seekForward,
+                    { playbackRepository.setShuffleEnabled(!playbackState.shuffleEnabled) },
+                    {
+                        playbackRepository.setRepeatMode(
+                            when (playbackState.repeatMode) {
+                                com.nightcallaudio.domain.model.RepeatMode.OFF -> com.nightcallaudio.domain.model.RepeatMode.ALL
+                                com.nightcallaudio.domain.model.RepeatMode.ALL -> com.nightcallaudio.domain.model.RepeatMode.ONE
+                                com.nightcallaudio.domain.model.RepeatMode.ONE -> com.nightcallaudio.domain.model.RepeatMode.OFF
+                            },
+                        )
+                    },
                     playbackRepository::seekTo,
                     { navController.navigate("queue") },
                 )
             }
             composable("queue") {
-                QueueScreen(playbackState, navController::navigateUp) { index -> onPlayTracks(playbackState.queue, index) }
+                QueueScreen(
+                    playbackState,
+                    navController::navigateUp,
+                    playbackRepository::skipTo,
+                    playbackRepository::removeFromQueue,
+                    playbackRepository::moveQueueItem,
+                )
             }
         }
     }

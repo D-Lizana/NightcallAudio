@@ -2,6 +2,7 @@ package com.nightcallaudio.testutil
 
 import com.nightcallaudio.domain.model.PlaybackState
 import com.nightcallaudio.domain.model.Track
+import com.nightcallaudio.domain.model.RepeatMode
 import com.nightcallaudio.domain.repository.MusicRepository
 import com.nightcallaudio.domain.repository.PlaybackRepository
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -48,6 +49,42 @@ class FakePlaybackRepository : PlaybackRepository {
     override fun skipToPrevious() {
         val previous = (mutableState.value.currentIndex - 1).coerceAtLeast(0)
         mutableState.value = mutableState.value.copy(currentIndex = previous)
+    }
+
+    override fun skipTo(index: Int) {
+        if (index in mutableState.value.queue.indices) mutableState.value = mutableState.value.copy(currentIndex = index)
+    }
+
+    override fun playNext(track: Track) {
+        val state = mutableState.value
+        val queue = state.queue.toMutableList().apply { add((state.currentIndex + 1).coerceIn(0, size), track) }
+        mutableState.value = state.copy(queue = queue)
+    }
+
+    override fun addToQueue(track: Track) {
+        mutableState.value = mutableState.value.copy(queue = mutableState.value.queue + track)
+    }
+
+    override fun removeFromQueue(index: Int) {
+        if (index in mutableState.value.queue.indices) {
+            mutableState.value = mutableState.value.copy(queue = mutableState.value.queue.toMutableList().apply { removeAt(index) })
+        }
+    }
+
+    override fun moveQueueItem(fromIndex: Int, toIndex: Int) {
+        val queue = mutableState.value.queue.toMutableList()
+        if (fromIndex in queue.indices && toIndex in queue.indices) {
+            queue.add(toIndex, queue.removeAt(fromIndex))
+            mutableState.value = mutableState.value.copy(queue = queue)
+        }
+    }
+
+    override fun setShuffleEnabled(enabled: Boolean) {
+        mutableState.value = mutableState.value.copy(shuffleEnabled = enabled)
+    }
+
+    override fun setRepeatMode(mode: RepeatMode) {
+        mutableState.value = mutableState.value.copy(repeatMode = mode)
     }
 
     override fun stop() {

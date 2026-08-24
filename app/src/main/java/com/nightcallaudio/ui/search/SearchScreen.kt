@@ -12,6 +12,7 @@ import androidx.compose.ui.unit.dp
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 import com.nightcallaudio.ui.library.LibraryUiState
+import com.nightcallaudio.domain.model.Track
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -20,6 +21,8 @@ fun SearchScreen(
     query: String,
     onQueryChange: (String) -> Unit,
     onTrackClick: (Int) -> Unit,
+    onPlayNext: (Track) -> Unit,
+    onAddToQueue: (Track) -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
         TopAppBar(title = { Text("Buscar", fontWeight = FontWeight.Bold) })
@@ -36,7 +39,13 @@ fun SearchScreen(
             query.isBlank() -> MessageState("Busca en tu biblioteca", "Los resultados se filtran localmente en el dispositivo.")
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             state.searchResults.isEmpty() -> MessageState("Sin resultados", "Prueba con otro título, artista o álbum.")
-            else -> TrackList(state.searchResults, onTrackClick, Modifier.padding(horizontal = 16.dp))
+            else -> TrackList(
+                state.searchResults,
+                onTrackClick,
+                Modifier.padding(horizontal = 16.dp),
+                onPlayNext,
+                onAddToQueue,
+            )
         }
     }
 }

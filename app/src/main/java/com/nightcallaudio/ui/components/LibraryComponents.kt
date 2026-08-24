@@ -7,8 +7,13 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.MusicNote
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
@@ -24,17 +29,31 @@ fun TrackList(
     tracks: List<Track>,
     onTrackClick: (Int) -> Unit,
     modifier: Modifier = Modifier,
+    onPlayNext: ((Track) -> Unit)? = null,
+    onAddToQueue: ((Track) -> Unit)? = null,
 ) {
     LazyColumn(modifier = modifier, verticalArrangement = Arrangement.spacedBy(8.dp)) {
         itemsIndexed(tracks, key = { _, track -> track.id }) { index, track ->
-            TrackRow(track = track, onClick = { onTrackClick(index) })
+            TrackRow(
+                track = track,
+                onClick = { onTrackClick(index) },
+                onPlayNext = onPlayNext?.let { action -> { action(track) } },
+                onAddToQueue = onAddToQueue?.let { action -> { action(track) } },
+            )
         }
         item { Spacer(Modifier.height(20.dp)) }
     }
 }
 
 @Composable
-fun TrackRow(track: Track, onClick: () -> Unit, modifier: Modifier = Modifier) {
+fun TrackRow(
+    track: Track,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+    onPlayNext: (() -> Unit)? = null,
+    onAddToQueue: (() -> Unit)? = null,
+) {
+    var menuExpanded by remember { mutableStateOf(false) }
     Card(
         modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
         shape = RoundedCornerShape(18.dp),
@@ -70,6 +89,25 @@ fun TrackRow(track: Track, onClick: () -> Unit, modifier: Modifier = Modifier) {
                 )
             }
             Text(formatDuration(track.durationMs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (onPlayNext != null || onAddToQueue != null) {
+                Box {
+                    IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Rounded.MoreVert, "Más opciones") }
+                    DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
+                        if (onPlayNext != null) {
+                            DropdownMenuItem(
+                                text = { Text("Reproducir a continuación") },
+                                onClick = { menuExpanded = false; onPlayNext() },
+                            )
+                        }
+                        if (onAddToQueue != null) {
+                            DropdownMenuItem(
+                                text = { Text("Añadir al final de la cola") },
+                                onClick = { menuExpanded = false; onAddToQueue() },
+                            )
+                        }
+                    }
+                }
+            }
         }
     }
 }

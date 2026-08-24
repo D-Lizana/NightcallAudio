@@ -29,6 +29,8 @@ fun LibraryScreen(
     state: LibraryUiState,
     onRefresh: () -> Unit,
     onPlayTracks: (List<Track>, Int) -> Unit,
+    onPlayNext: (Track) -> Unit,
+    onAddToQueue: (Track) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -66,6 +68,8 @@ fun LibraryScreen(
                 state.tracks,
                 { index -> onPlayTracks(state.tracks, index) },
                 Modifier.padding(horizontal = 16.dp),
+                onPlayNext,
+                onAddToQueue,
             )
             selectedCategory != null -> {
                 val categoryTracks = state.tracks.forCategory(section, selectedCategory.orEmpty())
@@ -77,6 +81,8 @@ fun LibraryScreen(
                         categoryTracks,
                         { index -> onPlayTracks(categoryTracks, index) },
                         Modifier.padding(horizontal = 16.dp),
+                        onPlayNext,
+                        onAddToQueue,
                     )
                 }
             }
