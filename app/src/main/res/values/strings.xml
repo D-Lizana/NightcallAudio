@@ -9,4 +9,6 @@
     <string name="navigation_favorites">Favoritos</string>
     <string name="player_title">Reproduciendo</string>
     <string name="queue_title">Cola de reproducción</string>
+    <string name="playback_notification_channel">Reproducción multimedia</string>
+    <string name="stop_playback_session">Detener</string>
 </resources>

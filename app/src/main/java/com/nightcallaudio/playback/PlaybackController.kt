@@ -49,6 +49,11 @@ class PlaybackController(
         withController { controller ->
             controller.addListener(object : Player.Listener {
                 override fun onEvents(player: Player, events: Player.Events) {
+                    if (player.mediaItemCount == 0 && queueOrder.tracks.isNotEmpty()) {
+                        queueOrder.replace(emptyList())
+                        _state.value = PlaybackState()
+                        persistSession(delayMs = 0)
+                    }
                     publishPlayerState(player)
                     updateProgressLoop(player)
                     if (
