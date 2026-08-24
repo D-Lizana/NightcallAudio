@@ -3,6 +3,7 @@ package com.nightcallaudio.playback
 import android.content.ComponentName
 import android.content.Context
 import android.net.Uri
+import android.os.SystemClock
 import androidx.core.content.ContextCompat
 import androidx.media3.common.*
 import androidx.media3.session.MediaController
@@ -14,17 +15,28 @@ import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.model.QueueOrderManager
 import com.nightcallaudio.domain.model.RepeatMode
 import com.nightcallaudio.domain.repository.PlaybackRepository
+import com.nightcallaudio.domain.repository.PlaybackPersistenceRepository
+import com.nightcallaudio.domain.repository.PersistedPlaybackSession
 import com.nightcallaudio.domain.usecase.PreviousAction
 import com.nightcallaudio.domain.usecase.PreviousButtonPolicy
+import com.nightcallaudio.domain.usecase.RestorePlaybackSessionUseCase
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 
-class PlaybackController(context: Context) : PlaybackRepository {
+class PlaybackController(
+    context: Context,
+    private val persistenceRepository: PlaybackPersistenceRepository,
+) : PlaybackRepository {
     private val applicationContext = context.applicationContext
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var progressJob: Job? = null
+    private var persistenceJob: Job? = null
+    private var restorationRequested = false
+    private var lastPositionSaveElapsedMs = 0L
+    private val restorePlaybackSession = RestorePlaybackSessionUseCase()
     private val queueOrder = QueueOrderManager()
     private val controllerFuture: ListenableFuture<MediaController> = MediaController.Builder(
         applicationContext,
@@ -39,6 +51,12 @@ class PlaybackController(context: Context) : PlaybackRepository {
                 override fun onEvents(player: Player, events: Player.Events) {
                     publishPlayerState(player)
                     updateProgressLoop(player)
+                    if (
+                        events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION) ||
+                        events.contains(Player.EVENT_POSITION_DISCONTINUITY)
+                    ) {
+                        persistSession(delayMs = 0)
+                    }
                 }
 
                 override fun onPlayerError(error: PlaybackException) {
@@ -59,16 +77,22 @@ class PlaybackController(context: Context) : PlaybackRepository {
             controller.setMediaItems(tracks.map { it.toMediaItem() }, selectedIndex, 0L)
             controller.prepare()
             controller.play()
+            persistSession()
         }
     }
 
     override fun play() = withController(MediaController::play)
 
-    override fun pause() = withController(MediaController::pause)
+    override fun pause() = withController { controller ->
+        controller.pause()
+        publishPlayerState(controller)
+        persistSession(delayMs = 0)
+    }
 
     override fun seekTo(positionMs: Long) = withController { controller ->
         val upperBound = controller.duration.takeIf { it != C.TIME_UNSET && it >= 0 } ?: Long.MAX_VALUE
         controller.seekTo(positionMs.coerceIn(0L, upperBound))
+        persistSession()
     }
 
     override fun seekBack() = withController(MediaController::seekBack)
@@ -96,12 +120,14 @@ class PlaybackController(context: Context) : PlaybackRepository {
         val insertion = queueOrder.addNext(track, controller.currentMediaItemIndex)
         controller.addMediaItem(insertion, track.toMediaItem())
         publishQueueState(controller)
+        persistSession()
     }
 
     override fun addToQueue(track: Track) = withController { controller ->
         val insertion = queueOrder.addToEnd(track, controller.currentMediaItemIndex)
         controller.addMediaItem(insertion, track.toMediaItem())
         publishQueueState(controller)
+        persistSession()
     }
 
     override fun removeFromQueue(index: Int) = withController { controller ->
@@ -109,6 +135,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
         queueOrder.remove(index)
         controller.removeMediaItem(index)
         publishQueueState(controller)
+        persistSession()
     }
 
     override fun moveQueueItem(fromIndex: Int, toIndex: Int) = withController { controller ->
@@ -116,6 +143,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
         queueOrder.move(fromIndex, toIndex)
         controller.moveMediaItem(fromIndex, toIndex)
         publishQueueState(controller)
+        persistSession()
     }
 
     override fun setShuffleEnabled(enabled: Boolean) = withController { controller ->
@@ -127,6 +155,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
         controller.prepare()
         if (wasPlaying) controller.play()
         publishQueueState(controller)
+        persistSession()
     }
 
     override fun setRepeatMode(mode: RepeatMode) = withController { controller ->
@@ -136,6 +165,39 @@ class PlaybackController(context: Context) : PlaybackRepository {
             RepeatMode.ONE -> Player.REPEAT_MODE_ONE
         }
         publishPlayerState(controller)
+        persistSession()
+    }
+
+    override fun restoreSession(availableTracks: List<Track>) {
+        if (restorationRequested || availableTracks.isEmpty()) return
+        restorationRequested = true
+        scope.launch {
+            val session = persistenceRepository.observe().first() ?: return@launch
+            val resolved = restorePlaybackSession(session, availableTracks)
+            if (resolved == null) {
+                persistenceRepository.save(emptyPersistedSession())
+                return@launch
+            }
+            queueOrder.restore(resolved.tracks, resolved.originalPositions, session.shuffleEnabled)
+            withController { controller ->
+                controller.pause()
+                controller.setMediaItems(
+                    resolved.tracks.map { it.toMediaItem() },
+                    resolved.currentIndex,
+                    resolved.positionMs,
+                )
+                controller.repeatMode = session.repeatMode.toPlayerRepeatMode()
+                controller.prepare()
+                _state.value = PlaybackState(
+                    queue = resolved.tracks,
+                    currentIndex = resolved.currentIndex,
+                    positionMs = resolved.positionMs,
+                    shuffleEnabled = session.shuffleEnabled,
+                    repeatMode = session.repeatMode,
+                    status = PlaybackStatus.BUFFERING,
+                )
+            }
+        }
     }
 
     override fun stop() = withController { controller ->
@@ -143,6 +205,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
         controller.clearMediaItems()
         queueOrder.replace(emptyList())
         _state.value = PlaybackState()
+        persistSession(delayMs = 0)
     }
 
     override fun close() {
@@ -168,6 +231,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
         progressJob = scope.launch {
             while (isActive && player.isPlaying) {
                 publishPlayerState(player)
+                persistPositionIfDue()
                 delay(PROGRESS_UPDATE_INTERVAL_MS)
             }
         }
@@ -195,6 +259,41 @@ class PlaybackController(context: Context) : PlaybackRepository {
         )
     }
 
+    private fun persistPositionIfDue() {
+        val now = SystemClock.elapsedRealtime()
+        if (now - lastPositionSaveElapsedMs >= POSITION_SAVE_INTERVAL_MS) {
+            lastPositionSaveElapsedMs = now
+            persistSession(delayMs = 0)
+        }
+    }
+
+    private fun persistSession(delayMs: Long = PERSISTENCE_DEBOUNCE_MS) {
+        persistenceJob?.cancel()
+        persistenceJob = scope.launch {
+            if (delayMs > 0) delay(delayMs)
+            val playback = _state.value
+            persistenceRepository.save(
+                PersistedPlaybackSession(
+                    trackIds = queueOrder.tracks.map(Track::id),
+                    originalPositions = queueOrder.originalPositions,
+                    currentIndex = playback.currentIndex,
+                    positionMs = playback.positionMs,
+                    shuffleEnabled = queueOrder.shuffleEnabled,
+                    repeatMode = playback.repeatMode,
+                ),
+            )
+        }
+    }
+
+    private fun emptyPersistedSession() = PersistedPlaybackSession(
+        trackIds = emptyList(),
+        originalPositions = emptyList(),
+        currentIndex = -1,
+        positionMs = 0,
+        shuffleEnabled = false,
+        repeatMode = RepeatMode.OFF,
+    )
+
     private fun Int.toDomainStatus(): PlaybackStatus = when (this) {
         Player.STATE_BUFFERING -> PlaybackStatus.BUFFERING
         Player.STATE_READY -> PlaybackStatus.READY
@@ -206,6 +305,12 @@ class PlaybackController(context: Context) : PlaybackRepository {
         Player.REPEAT_MODE_ALL -> RepeatMode.ALL
         Player.REPEAT_MODE_ONE -> RepeatMode.ONE
         else -> RepeatMode.OFF
+    }
+
+    private fun RepeatMode.toPlayerRepeatMode(): Int = when (this) {
+        RepeatMode.OFF -> Player.REPEAT_MODE_OFF
+        RepeatMode.ALL -> Player.REPEAT_MODE_ALL
+        RepeatMode.ONE -> Player.REPEAT_MODE_ONE
     }
 
     private fun Track.toMediaItem(): MediaItem = MediaItem.Builder()
@@ -226,5 +331,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
 
     private companion object {
         const val PROGRESS_UPDATE_INTERVAL_MS = 500L
+        const val POSITION_SAVE_INTERVAL_MS = 5_000L
+        const val PERSISTENCE_DEBOUNCE_MS = 250L
     }
 }

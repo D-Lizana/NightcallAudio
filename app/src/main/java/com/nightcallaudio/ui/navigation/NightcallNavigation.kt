@@ -7,6 +7,7 @@ import androidx.compose.material.icons.automirrored.rounded.QueueMusic
 import androidx.compose.material.icons.rounded.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
@@ -46,6 +47,10 @@ fun NightcallNavigation(
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
     val showMainChrome = currentRoute in mainDestinations.map { it.route }
+
+    LaunchedEffect(libraryState.tracks) {
+        if (libraryState.tracks.isNotEmpty()) playbackRepository.restoreSession(libraryState.tracks)
+    }
 
     Scaffold(
         bottomBar = {

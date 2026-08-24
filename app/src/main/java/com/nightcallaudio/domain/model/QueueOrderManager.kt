@@ -16,10 +16,23 @@ class QueueOrderManager(
     val tracks: List<Track>
         get() = active.map(Entry::track)
 
+    val originalPositions: List<Int>
+        get() = active.map { entry -> canonical.indexOfFirst { it.instanceId == entry.instanceId } }
+
     fun replace(tracks: List<Track>) {
         canonical = tracks.map { Entry(nextInstanceId++, it) }.toMutableList()
         active = canonical.toMutableList()
         shuffleEnabled = false
+    }
+
+    fun restore(tracks: List<Track>, originalPositions: List<Int>, shuffled: Boolean) {
+        require(tracks.size == originalPositions.size)
+        active = tracks.map { Entry(nextInstanceId++, it) }.toMutableList()
+        canonical = active.zip(originalPositions)
+            .sortedBy { (_, originalPosition) -> originalPosition }
+            .map { (entry, _) -> entry }
+            .toMutableList()
+        shuffleEnabled = shuffled
     }
 
     fun setShuffleEnabled(enabled: Boolean, currentIndex: Int): Int {

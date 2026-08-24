@@ -19,10 +19,10 @@ import com.nightcallaudio.domain.usecase.CleanupMissingReferencesUseCase
 class AppContainer(context: Context) {
     val database: NightcallDatabase = NightcallDatabase.create(context)
     val musicRepository: MusicRepository = MediaStoreMusicRepository(context)
-    val playbackRepository: PlaybackRepository = PlaybackController(context)
     val playlistRepository: PlaylistRepository = RoomPlaylistRepository(database.playlistDao(), musicRepository)
     val favoritesRepository: FavoritesRepository = RoomFavoritesRepository(database.favoritesDao())
     val playbackPersistenceRepository: PlaybackPersistenceRepository = RoomPlaybackPersistenceRepository(database)
+    val playbackRepository: PlaybackRepository = PlaybackController(context, playbackPersistenceRepository)
     val getMusicLibrary = GetMusicLibraryUseCase(musicRepository)
     val searchTracks = SearchTracksUseCase()
     val cleanupMissingReferences = CleanupMissingReferencesUseCase(playlistRepository, favoritesRepository)

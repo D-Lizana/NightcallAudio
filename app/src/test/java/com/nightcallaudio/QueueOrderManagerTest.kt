@@ -71,6 +71,20 @@ class QueueOrderManagerTest {
         assertEquals(listOf(third, first, second), manager.tracks)
     }
 
+    @Test
+    fun `restaura orden activo y recupera el canonico`() {
+        val manager = QueueOrderManager(Random(1))
+        manager.restore(
+            tracks = listOf(second, third, first),
+            originalPositions = listOf(1, 2, 0),
+            shuffled = true,
+        )
+
+        assertEquals(listOf(1, 2, 0), manager.originalPositions)
+        manager.setShuffleEnabled(false, 0)
+        assertEquals(listOf(first, second, third), manager.tracks)
+    }
+
     private fun track(id: Long, title: String) = Track(
         id = id,
         contentUri = "content://audio/$id",

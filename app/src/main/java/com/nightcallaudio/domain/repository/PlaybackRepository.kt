@@ -23,5 +23,6 @@ interface PlaybackRepository : AutoCloseable {
     fun moveQueueItem(fromIndex: Int, toIndex: Int)
     fun setShuffleEnabled(enabled: Boolean)
     fun setRepeatMode(mode: RepeatMode)
+    fun restoreSession(availableTracks: List<Track>)
     fun stop()
 }

@@ -87,6 +87,8 @@ class FakePlaybackRepository : PlaybackRepository {
         mutableState.value = mutableState.value.copy(repeatMode = mode)
     }
 
+    override fun restoreSession(availableTracks: List<Track>) = Unit
+
     override fun stop() {
         mutableState.value = PlaybackState()
     }
