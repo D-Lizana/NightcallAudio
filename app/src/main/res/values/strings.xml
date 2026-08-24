@@ -1,3 +1,6 @@
 <resources>
     <string name="app_name">NightcallAudio</string>
+    <string name="permission_audio_title">Acceso a tu música</string>
+    <string name="permission_audio_message">NightcallAudio necesita permiso para encontrar y reproducir los archivos de audio del dispositivo.</string>
+    <string name="permission_audio_action">Permitir acceso</string>
 </resources>
