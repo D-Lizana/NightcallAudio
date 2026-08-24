@@ -8,9 +8,12 @@ data class Track(
     val artistId: Long?,
     val album: String,
     val albumId: Long?,
+    val artworkUri: String?,
     val durationMs: Long,
     val trackNumber: Int?,
     val discNumber: Int?,
     val genre: String?,
     val folder: String?,
+    val year: Int?,
+    val dateAddedEpochSeconds: Long?,
 )

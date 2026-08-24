@@ -14,6 +14,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.layout.ContentScale
+import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.Track
 import java.util.Locale
 
@@ -46,6 +48,14 @@ fun TrackRow(track: Track, onClick: () -> Unit, modifier: Modifier = Modifier) {
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Icon(Icons.Rounded.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                    if (track.artworkUri != null) {
+                        AsyncImage(
+                            model = track.artworkUri,
+                            contentDescription = "Carátula de ${track.album}",
+                            modifier = Modifier.fillMaxSize(),
+                            contentScale = ContentScale.Crop,
+                        )
+                    }
                 }
             }
             Column(Modifier.weight(1f).padding(horizontal = 12.dp)) {

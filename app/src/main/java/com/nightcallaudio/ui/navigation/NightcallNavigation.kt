@@ -79,10 +79,10 @@ fun NightcallNavigation(
     ) { outerPadding ->
         NavHost(navController = navController, startDestination = "library", modifier = Modifier.padding(outerPadding)) {
             composable("library") {
-                LibraryScreen(libraryState, { libraryViewModel.loadMusic(true) }) { index -> onPlayTracks(libraryState.tracks, index) }
+                LibraryScreen(libraryState, { libraryViewModel.loadMusic(true) }, onPlayTracks)
             }
             composable("search") {
-                SearchScreen(libraryState, query, libraryViewModel::updateQuery) { index -> onPlayTracks(libraryState.tracks, index) }
+                SearchScreen(libraryState, query, libraryViewModel::updateQuery) { index -> onPlayTracks(libraryState.searchResults, index) }
             }
             composable("playlists") { PlaylistsScreen() }
             composable("favorites") { FavoritesScreen() }

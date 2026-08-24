@@ -2,6 +2,7 @@ package com.nightcallaudio.playback
 
 import android.content.ComponentName
 import android.content.Context
+import android.net.Uri
 import androidx.core.content.ContextCompat
 import androidx.media3.common.Player
 import androidx.media3.common.MediaItem
@@ -85,6 +86,7 @@ class PlaybackController(context: Context) : PlaybackRepository {
                 .setTitle(title)
                 .setArtist(artist)
                 .setAlbumTitle(album)
+                .setArtworkUri(artworkUri?.let(Uri::parse))
                 .setIsPlayable(true)
                 .build(),
         )

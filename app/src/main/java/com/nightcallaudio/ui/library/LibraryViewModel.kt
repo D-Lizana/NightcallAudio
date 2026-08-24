@@ -15,9 +15,15 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.catch
+import kotlinx.coroutines.flow.onEach
+import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.launchIn
 
 data class LibraryUiState(
     val tracks: List<Track> = emptyList(),
+    val searchResults: List<Track> = emptyList(),
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
 )
@@ -39,20 +45,41 @@ class LibraryViewModel(
         query,
     ) { library, isLoading, errorMessage, searchQuery ->
         val filtered = searchTracks(library?.tracks.orEmpty(), searchQuery)
-        LibraryUiState(filtered, isLoading, errorMessage)
+        LibraryUiState(
+            tracks = library?.tracks.orEmpty(),
+            searchResults = filtered,
+            isLoading = isLoading,
+            errorMessage = errorMessage,
+        )
     }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), LibraryUiState())
 
-    private var hasLoaded = false
+    private var observationJob: Job? = null
 
     fun loadMusic(force: Boolean = false) {
-        if (hasLoaded && !force) return
+        if (observationJob?.isActive != true) {
+            observationJob = getMusicLibrary.observe()
+                .onStart {
+                    loading.value = true
+                    error.value = null
+                }
+                .onEach { library ->
+                    sourceLibrary.value = library
+                    loading.value = false
+                    error.value = null
+                }
+                .catch {
+                    loading.value = false
+                    error.value = "No se ha podido leer la música del dispositivo."
+                }
+                .launchIn(viewModelScope)
+        }
+        if (!force) return
         viewModelScope.launch {
             loading.value = true
             error.value = null
             runCatching { getMusicLibrary() }
                 .onSuccess {
                     sourceLibrary.value = it
-                    hasLoaded = true
                 }
                 .onFailure { error.value = "No se ha podido leer la música del dispositivo." }
             loading.value = false

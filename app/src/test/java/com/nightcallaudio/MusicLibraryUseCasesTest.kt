@@ -36,6 +36,25 @@ class MusicLibraryUseCasesTest {
         assertEquals(listOf(3L), search(tracks, "reborn").map(Track::id))
     }
 
+    @Test
+    fun `procesa una biblioteca de cientos de canciones sin perder elementos`() = runBlocking {
+        val largeLibrary = List(750) { index ->
+            tracks.first().copy(
+                id = index.toLong(),
+                contentUri = "content://audio/$index",
+                title = "Canción ${index.toString().padStart(3, '0')}",
+                albumId = (index / 15).toLong(),
+                album = "Álbum ${index / 15}",
+            )
+        }
+
+        val result = GetMusicLibraryUseCase(FakeMusicRepository(largeLibrary))()
+
+        assertEquals(750, result.tracks.size)
+        assertEquals(50, result.albums.size)
+        assertEquals(1, result.artists.size)
+    }
+
     private fun track(
         id: Long,
         title: String,
@@ -53,10 +72,13 @@ class MusicLibraryUseCasesTest {
         artistId = artistId,
         album = album,
         albumId = albumId,
+        artworkUri = "content://albumart/$albumId",
         durationMs = 180_000,
         trackNumber = id.toInt(),
         discNumber = 1,
         genre = genre,
         folder = folder,
+        year = 2013,
+        dateAddedEpochSeconds = 1_700_000_000,
     )
 }

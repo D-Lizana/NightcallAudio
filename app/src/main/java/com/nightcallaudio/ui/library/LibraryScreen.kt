@@ -1,6 +1,7 @@
 package com.nightcallaudio.ui.library
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
@@ -12,6 +13,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
+import com.nightcallaudio.domain.model.Track
 
 private enum class LibrarySection(val label: String) {
     TRACKS("Canciones"),
@@ -26,9 +28,10 @@ private enum class LibrarySection(val label: String) {
 fun LibraryScreen(
     state: LibraryUiState,
     onRefresh: () -> Unit,
-    onTrackClick: (Int) -> Unit,
+    onPlayTracks: (List<Track>, Int) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
+    var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
         LargeTopAppBar(
             title = {
@@ -44,7 +47,14 @@ fun LibraryScreen(
             horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(LibrarySection.entries) { item ->
-                FilterChip(selected = section == item, onClick = { section = item }, label = { Text(item.label) })
+                FilterChip(
+                    selected = section == item,
+                    onClick = {
+                        section = item
+                        selectedCategory = null
+                    },
+                    label = { Text(item.label) },
+                )
             }
         }
         Spacer(Modifier.height(10.dp))
@@ -52,14 +62,31 @@ fun LibraryScreen(
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             state.errorMessage != null -> MessageState("No se pudo cargar la biblioteca", state.errorMessage, action = "Reintentar", onAction = onRefresh)
             state.tracks.isEmpty() -> MessageState("No hay música", "Añade canciones de al menos 30 segundos al dispositivo.")
-            section == LibrarySection.TRACKS -> TrackList(state.tracks, onTrackClick, Modifier.padding(horizontal = 16.dp))
-            else -> CategoryPreview(section = section, state = state)
+            section == LibrarySection.TRACKS -> TrackList(
+                state.tracks,
+                { index -> onPlayTracks(state.tracks, index) },
+                Modifier.padding(horizontal = 16.dp),
+            )
+            selectedCategory != null -> {
+                val categoryTracks = state.tracks.forCategory(section, selectedCategory.orEmpty())
+                Column(Modifier.fillMaxSize()) {
+                    TextButton(onClick = { selectedCategory = null }, modifier = Modifier.padding(horizontal = 8.dp)) {
+                        Text("‹ ${section.label} · ${selectedCategory.orEmpty()}")
+                    }
+                    TrackList(
+                        categoryTracks,
+                        { index -> onPlayTracks(categoryTracks, index) },
+                        Modifier.padding(horizontal = 16.dp),
+                    )
+                }
+            }
+            else -> CategoryPreview(section = section, state = state, onSelect = { selectedCategory = it })
         }
     }
 }
 
 @Composable
-private fun CategoryPreview(section: LibrarySection, state: LibraryUiState) {
+private fun CategoryPreview(section: LibrarySection, state: LibraryUiState, onSelect: (String) -> Unit) {
     val labels = when (section) {
         LibrarySection.ARTISTS -> state.tracks.map { it.artist }.distinct().sorted()
         LibrarySection.ALBUMS -> state.tracks.map { it.album }.distinct().sorted()
@@ -76,10 +103,27 @@ private fun CategoryPreview(section: LibrarySection, state: LibraryUiState) {
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
             items(labels.size) { index ->
-                ElevatedCard(Modifier.fillMaxWidth()) {
+                ElevatedCard(Modifier.fillMaxWidth().clickable { onSelect(labels[index]) }) {
                     Text(labels[index], Modifier.padding(18.dp), style = MaterialTheme.typography.titleMedium)
                 }
             }
         }
+    }
+}
+
+private fun List<Track>.forCategory(section: LibrarySection, value: String): List<Track> {
+    val matching = filter { track ->
+        when (section) {
+            LibrarySection.ARTISTS -> track.artist == value
+            LibrarySection.ALBUMS -> track.album == value
+            LibrarySection.GENRES -> track.genre == value
+            LibrarySection.FOLDERS -> track.folder == value
+            LibrarySection.TRACKS -> true
+        }
+    }
+    return if (section == LibrarySection.ALBUMS) {
+        matching.sortedWith(compareBy<Track>({ it.discNumber ?: 1 }, { it.trackNumber ?: Int.MAX_VALUE }, { it.title.lowercase() }))
+    } else {
+        matching.sortedBy { it.title.lowercase() }
     }
 }

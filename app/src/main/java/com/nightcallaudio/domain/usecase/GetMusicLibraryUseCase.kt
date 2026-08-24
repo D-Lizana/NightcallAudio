@@ -6,12 +6,18 @@ import com.nightcallaudio.domain.model.Genre
 import com.nightcallaudio.domain.model.MusicFolder
 import com.nightcallaudio.domain.model.MusicLibrary
 import com.nightcallaudio.domain.repository.MusicRepository
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.map
 
 class GetMusicLibraryUseCase(
     private val repository: MusicRepository,
 ) {
-    suspend operator fun invoke(): MusicLibrary {
-        val tracks = repository.getTracks().sortedBy { it.title.lowercase() }
+    suspend operator fun invoke(): MusicLibrary = buildLibrary(repository.getTracks())
+
+    fun observe(): Flow<MusicLibrary> = repository.observeTracks().map(::buildLibrary)
+
+    private fun buildLibrary(sourceTracks: List<com.nightcallaudio.domain.model.Track>): MusicLibrary {
+        val tracks = sourceTracks.sortedBy { it.title.lowercase() }
         return MusicLibrary(
             tracks = tracks,
             artists = tracks.groupBy { it.artistId to it.artist }.map { (key, values) ->

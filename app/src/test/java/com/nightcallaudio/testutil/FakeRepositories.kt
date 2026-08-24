@@ -6,11 +6,14 @@ import com.nightcallaudio.domain.repository.MusicRepository
 import com.nightcallaudio.domain.repository.PlaybackRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.flowOf
 
 class FakeMusicRepository(
     var tracks: List<Track> = emptyList(),
 ) : MusicRepository {
     override suspend fun getTracks(): List<Track> = tracks
+    override fun observeTracks(): Flow<List<Track>> = flowOf(tracks)
 }
 
 class FakePlaybackRepository : PlaybackRepository {
