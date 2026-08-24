@@ -11,6 +11,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
+import android.net.Uri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.*
@@ -21,6 +22,7 @@ import com.nightcallaudio.ui.collections.PlaylistsScreen
 import com.nightcallaudio.ui.components.MiniPlayer
 import com.nightcallaudio.ui.library.LibraryScreen
 import com.nightcallaudio.ui.library.LibraryViewModel
+import com.nightcallaudio.ui.library.CollectionDetailScreen
 import com.nightcallaudio.ui.player.PlayerScreen
 import com.nightcallaudio.ui.player.QueueScreen
 import com.nightcallaudio.ui.search.SearchScreen
@@ -46,7 +48,8 @@ fun NightcallNavigation(
     val playbackState by playbackRepository.state.collectAsStateWithLifecycle()
     val backStack by navController.currentBackStackEntryAsState()
     val currentRoute = backStack?.destination?.route
-    val showMainChrome = currentRoute in mainDestinations.map { it.route }
+    val showMainChrome = currentRoute in mainDestinations.map { it.route } ||
+        currentRoute == "artist/{artist}" || currentRoute == "album/{artist}/{album}"
 
     LaunchedEffect(libraryState.tracks) {
         if (libraryState.tracks.isNotEmpty()) playbackRepository.restoreSession(libraryState.tracks)
@@ -90,6 +93,37 @@ fun NightcallNavigation(
                     onPlayTracks,
                     playbackRepository::playNext,
                     playbackRepository::addToQueue,
+                    { artist -> navController.navigate("artist/${Uri.encode(artist)}") },
+                    { album, artist -> navController.navigate("album/${Uri.encode(artist)}/${Uri.encode(album)}") },
+                )
+            }
+            composable("artist/{artist}") { entry ->
+                val artist = Uri.decode(entry.arguments?.getString("artist").orEmpty())
+                val tracks = libraryState.tracks.filter { it.artist == artist }.sortedBy { it.title.lowercase() }
+                CollectionDetailScreen(
+                    title = artist,
+                    subtitle = "Artista · ${tracks.size} canciones",
+                    tracks = tracks,
+                    onBack = navController::navigateUp,
+                    onPlayTracks = onPlayTracks,
+                    onPlayNext = playbackRepository::playNext,
+                    onAddToQueue = playbackRepository::addToQueue,
+                )
+            }
+            composable("album/{artist}/{album}") { entry ->
+                val artist = Uri.decode(entry.arguments?.getString("artist").orEmpty())
+                val album = Uri.decode(entry.arguments?.getString("album").orEmpty())
+                val tracks = libraryState.tracks
+                    .filter { it.artist == artist && it.album == album }
+                    .sortedWith(compareBy<Track>({ it.discNumber ?: 1 }, { it.trackNumber ?: Int.MAX_VALUE }, { it.title.lowercase() }))
+                CollectionDetailScreen(
+                    title = album,
+                    subtitle = "$artist · ${tracks.size} canciones",
+                    tracks = tracks,
+                    onBack = navController::navigateUp,
+                    onPlayTracks = onPlayTracks,
+                    onPlayNext = playbackRepository::playNext,
+                    onAddToQueue = playbackRepository::addToQueue,
                 )
             }
             composable("search") {

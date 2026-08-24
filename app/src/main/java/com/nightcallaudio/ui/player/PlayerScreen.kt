@@ -1,6 +1,8 @@
 package com.nightcallaudio.ui.player
 
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -13,6 +15,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -45,6 +48,11 @@ fun PlayerScreen(
     onOpenQueue: () -> Unit,
 ) {
     val track = state.currentTrack
+    var isSeeking by remember { mutableStateOf(false) }
+    var sliderPosition by remember { mutableFloatStateOf(state.positionMs.toFloat()) }
+    LaunchedEffect(state.positionMs, isSeeking) {
+        if (!isSeeking) sliderPosition = state.positionMs.toFloat()
+    }
     Scaffold(
         topBar = {
             TopAppBar(
@@ -58,13 +66,17 @@ fun PlayerScreen(
             MessageState("Nada en reproducción", "Selecciona una canción de tu biblioteca.", Modifier.padding(padding))
             return@Scaffold
         }
-        Column(
-            Modifier.fillMaxSize().padding(padding).padding(horizontal = 28.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.Center,
-        ) {
-            Surface(
-                modifier = Modifier.fillMaxWidth().aspectRatio(1f),
+        BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
+            val artworkSize = minOf(maxWidth - 56.dp, 480.dp)
+            Column(
+                Modifier
+                    .fillMaxSize()
+                    .verticalScroll(rememberScrollState())
+                    .padding(horizontal = 28.dp, vertical = 20.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+            ) {
+                Surface(
+                modifier = Modifier.size(artworkSize.coerceAtLeast(180.dp)),
                 shape = RoundedCornerShape(32.dp),
                 color = MaterialTheme.colorScheme.primaryContainer,
                 tonalElevation = 6.dp,
@@ -86,12 +98,19 @@ fun PlayerScreen(
             Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(20.dp))
             Slider(
-                value = state.positionMs.toFloat().coerceAtMost(state.durationMs.coerceAtLeast(1).toFloat()),
-                onValueChange = { onSeek(it.toLong()) },
+                value = sliderPosition.coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),
+                onValueChange = {
+                    isSeeking = true
+                    sliderPosition = it
+                },
+                onValueChangeFinished = {
+                    onSeek(sliderPosition.toLong())
+                    isSeeking = false
+                },
                 valueRange = 0f..state.durationMs.coerceAtLeast(1).toFloat(),
             )
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatDuration(state.positionMs), style = MaterialTheme.typography.labelMedium)
+                Text(formatDuration(if (isSeeking) sliderPosition.toLong() else state.positionMs), style = MaterialTheme.typography.labelMedium)
                 Text(formatDuration(state.durationMs), style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(12.dp))
@@ -131,6 +150,8 @@ fun PlayerScreen(
                 }
                 IconButton(onClick = onSeekForward) { Icon(Icons.Rounded.Forward10, "Avanzar 10 segundos") }
                 IconButton(onClick = onNext) { Icon(Icons.Rounded.SkipNext, "Siguiente") }
+            }
+            Spacer(Modifier.height(20.dp))
             }
         }
     }

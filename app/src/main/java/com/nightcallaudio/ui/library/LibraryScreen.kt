@@ -31,6 +31,8 @@ fun LibraryScreen(
     onPlayTracks: (List<Track>, Int) -> Unit,
     onPlayNext: (Track) -> Unit,
     onAddToQueue: (Track) -> Unit,
+    onOpenArtist: (String) -> Unit,
+    onOpenAlbum: (String, String) -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -86,21 +88,35 @@ fun LibraryScreen(
                     )
                 }
             }
-            else -> CategoryPreview(section = section, state = state, onSelect = { selectedCategory = it })
+            else -> CategoryPreview(
+                section = section,
+                state = state,
+                onSelect = { value, secondary ->
+                    when (section) {
+                        LibrarySection.ARTISTS -> onOpenArtist(value)
+                        LibrarySection.ALBUMS -> onOpenAlbum(value, secondary.orEmpty())
+                        else -> selectedCategory = value
+                    }
+                },
+            )
         }
     }
 }
 
 @Composable
-private fun CategoryPreview(section: LibrarySection, state: LibraryUiState, onSelect: (String) -> Unit) {
-    val labels = when (section) {
-        LibrarySection.ARTISTS -> state.tracks.map { it.artist }.distinct().sorted()
-        LibrarySection.ALBUMS -> state.tracks.map { it.album }.distinct().sorted()
-        LibrarySection.GENRES -> state.tracks.mapNotNull { it.genre }.distinct().sorted()
-        LibrarySection.FOLDERS -> state.tracks.mapNotNull { it.folder }.distinct().sorted()
+private fun CategoryPreview(
+    section: LibrarySection,
+    state: LibraryUiState,
+    onSelect: (String, String?) -> Unit,
+) {
+    val entries = when (section) {
+        LibrarySection.ARTISTS -> state.artists.map { CategoryEntry(it.name, it.trackCount) }
+        LibrarySection.ALBUMS -> state.albums.map { CategoryEntry(it.title, it.trackCount, it.artist) }
+        LibrarySection.GENRES -> state.genres.map { CategoryEntry(it.name, it.trackCount) }
+        LibrarySection.FOLDERS -> state.folders.map { CategoryEntry(it.name, it.trackCount) }
         LibrarySection.TRACKS -> emptyList()
     }
-    if (labels.isEmpty()) {
+    if (entries.isEmpty()) {
         MessageState("Sin ${section.label.lowercase()}", "No hay información disponible para esta categoría.")
     } else {
         androidx.compose.foundation.lazy.LazyColumn(
@@ -108,14 +124,25 @@ private fun CategoryPreview(section: LibrarySection, state: LibraryUiState, onSe
             contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            items(labels.size) { index ->
-                ElevatedCard(Modifier.fillMaxWidth().clickable { onSelect(labels[index]) }) {
-                    Text(labels[index], Modifier.padding(18.dp), style = MaterialTheme.typography.titleMedium)
+            items(entries.size) { index ->
+                val entry = entries[index]
+                ElevatedCard(Modifier.fillMaxWidth().clickable { onSelect(entry.title, entry.secondary) }) {
+                    Row(Modifier.fillMaxWidth().padding(18.dp), verticalAlignment = Alignment.CenterVertically) {
+                        Column(Modifier.weight(1f)) {
+                            Text(entry.title, style = MaterialTheme.typography.titleMedium)
+                            entry.secondary?.let {
+                                Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        Text("${entry.trackCount} canciones", style = MaterialTheme.typography.labelMedium)
+                    }
                 }
             }
         }
     }
 }
+
+private data class CategoryEntry(val title: String, val trackCount: Int, val secondary: String? = null)
 
 private fun List<Track>.forCategory(section: LibrarySection, value: String): List<Track> {
     val matching = filter { track ->

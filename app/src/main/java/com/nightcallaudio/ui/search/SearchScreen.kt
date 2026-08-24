@@ -36,8 +36,9 @@ fun SearchScreen(
         )
         Spacer(Modifier.height(12.dp))
         when {
-            query.isBlank() -> MessageState("Busca en tu biblioteca", "Los resultados se filtran localmente en el dispositivo.")
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+            state.errorMessage != null -> MessageState("No se pudo buscar", state.errorMessage)
+            query.isBlank() -> MessageState("Busca en tu biblioteca", "Los resultados se filtran localmente en el dispositivo.")
             state.searchResults.isEmpty() -> MessageState("Sin resultados", "Prueba con otro título, artista o álbum.")
             else -> TrackList(
                 state.searchResults,
