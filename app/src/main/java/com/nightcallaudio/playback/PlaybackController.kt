@@ -35,22 +35,24 @@ class PlaybackController(
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var progressJob: Job? = null
     private var persistenceJob: Job? = null
+    private var reconnectJob: Job? = null
+    private var closed = false
     private var restorationRequested = false
     private var lastPositionSaveElapsedMs = 0L
     private val restorePlaybackSession = RestorePlaybackSessionUseCase()
     private var pendingRestoredCommand: PendingRestoredCommand? = null
     private var lastWidgetSnapshot: WidgetSnapshot? = null
     private val queueOrder = QueueOrderManager()
-    private val controllerFuture: ListenableFuture<MediaController> = MediaController.Builder(
-        applicationContext,
-        SessionToken(applicationContext, ComponentName(applicationContext, PlaybackService::class.java)),
-    ).buildAsync()
+    private val controllerListener = object : MediaController.Listener {
+        override fun onDisconnected(controller: MediaController) {
+            if (!closed) scheduleReconnect()
+        }
+    }
+    private var controllerFuture: ListenableFuture<MediaController> = createControllerFuture()
     private val _state = MutableStateFlow(PlaybackState())
     override val state: StateFlow<PlaybackState> = _state.asStateFlow()
 
-    init {
-        withController { controller ->
-            controller.addListener(object : Player.Listener {
+    private val playerListener = object : Player.Listener {
                 override fun onEvents(player: Player, events: Player.Events) {
                     if (player.mediaItemCount == 0 && queueOrder.tracks.isNotEmpty()) {
                         queueOrder.replace(emptyList())
@@ -72,7 +74,15 @@ class PlaybackController(
                         errorMessage = "No se pudo reproducir la canción. Se intentará continuar con la cola.",
                     )
                 }
-            })
+            }
+
+    init {
+        attachController()
+    }
+
+    private fun attachController() {
+        withController { controller ->
+            controller.addListener(playerListener)
             publishPlayerState(controller)
         }
     }
@@ -233,20 +243,40 @@ class PlaybackController(
     }
 
     override fun close() {
+        closed = true
         progressJob?.cancel()
+        reconnectJob?.cancel()
         scope.cancel()
         MediaController.releaseFuture(controllerFuture)
     }
 
     private fun withController(action: (MediaController) -> Unit) {
-        controllerFuture.addListener(
+        val future = controllerFuture
+        future.addListener(
             {
-                runCatching { action(controllerFuture.get()) }.onFailure { error ->
+                runCatching { action(future.get()) }.onFailure { error ->
                     _state.value = _state.value.copy(errorMessage = error.message ?: "No se pudo conectar con el reproductor.")
+                    scheduleReconnect()
                 }
             },
             ContextCompat.getMainExecutor(applicationContext),
         )
+    }
+
+    private fun createControllerFuture(): ListenableFuture<MediaController> = MediaController.Builder(
+        applicationContext,
+        SessionToken(applicationContext, ComponentName(applicationContext, PlaybackService::class.java)),
+    ).setListener(controllerListener).buildAsync()
+
+    private fun scheduleReconnect() {
+        if (closed || reconnectJob?.isActive == true) return
+        _state.value = _state.value.copy(errorMessage = "Se ha perdido la conexión con el reproductor. Reconectando…")
+        reconnectJob = scope.launch {
+            delay(RECONNECT_DELAY_MS)
+            MediaController.releaseFuture(controllerFuture)
+            controllerFuture = createControllerFuture()
+            attachController()
+        }
     }
 
     private fun updateProgressLoop(player: Player) {
@@ -367,6 +397,7 @@ class PlaybackController(
         const val PROGRESS_UPDATE_INTERVAL_MS = 500L
         const val POSITION_SAVE_INTERVAL_MS = 5_000L
         const val PERSISTENCE_DEBOUNCE_MS = 250L
+        const val RECONNECT_DELAY_MS = 500L
     }
 
     private enum class PendingRestoredCommand { PLAY, PREVIOUS, NEXT }

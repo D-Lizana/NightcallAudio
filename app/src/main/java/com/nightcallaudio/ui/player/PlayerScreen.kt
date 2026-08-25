@@ -24,6 +24,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.PlaybackState
 import com.nightcallaudio.domain.model.PlaybackStatus
@@ -125,22 +128,26 @@ fun PlayerScreen(
             Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                 IconButton(onClick = onToggleShuffle) {
-                    Icon(
-                        Icons.Rounded.Shuffle,
-                        "Reproducción aleatoria",
-                        tint = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    BadgedBox(badge = { if (state.shuffleEnabled) Badge { Text("✓") } }) {
+                        Icon(
+                            Icons.Rounded.Shuffle,
+                            if (state.shuffleEnabled) "Aleatorio activado. Desactivar" else "Aleatorio desactivado. Activar",
+                            tint = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 IconButton(onClick = onCycleRepeat) {
-                    Icon(
-                        if (state.repeatMode == RepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
-                        when (state.repeatMode) {
-                            RepeatMode.OFF -> "Activar repetición de cola"
-                            RepeatMode.ALL -> "Activar repetición de canción"
-                            RepeatMode.ONE -> "Desactivar repetición"
-                        },
-                        tint = if (state.repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
-                    )
+                    BadgedBox(badge = { Badge { Text(when (state.repeatMode) { RepeatMode.OFF -> "No"; RepeatMode.ALL -> "∞"; RepeatMode.ONE -> "1" }) } }) {
+                        Icon(
+                            if (state.repeatMode == RepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
+                            when (state.repeatMode) {
+                                RepeatMode.OFF -> "Repetición desactivada. Activar repetición de cola"
+                                RepeatMode.ALL -> "Repetición de cola activada. Activar repetición de canción"
+                                RepeatMode.ONE -> "Repetición de canción activada. Desactivar"
+                            },
+                            tint = if (state.repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
+                        )
+                    }
                 }
             }
             state.errorMessage?.let {
@@ -211,7 +218,15 @@ fun QueueScreen(
                         com.nightcallaudio.ui.components.TrackRow(
                             track = state.queue[index],
                             onClick = { onTrackClick(index) },
-                            modifier = Modifier.pointerInput(index, state.queue.size) {
+                            modifier = Modifier
+                                .semantics {
+                                    customActions = buildList {
+                                        if (index > 0) add(CustomAccessibilityAction("Subir en la cola") { onMove(index, index - 1); true })
+                                        if (index < state.queue.lastIndex) add(CustomAccessibilityAction("Bajar en la cola") { onMove(index, index + 1); true })
+                                        add(CustomAccessibilityAction("Eliminar de la cola") { onRemove(index); true })
+                                    }
+                                }
+                                .pointerInput(index, state.queue.size) {
                                 detectDragGesturesAfterLongPress(
                                     onDragEnd = { draggedY = 0f },
                                     onDragCancel = { draggedY = 0f },

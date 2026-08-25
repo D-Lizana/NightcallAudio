@@ -22,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.semantics.Role
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.model.Playlist
@@ -70,7 +71,11 @@ fun TrackRow(
 ) {
     var menuExpanded by remember { mutableStateOf(false) }
     Card(
-        modifier = modifier.fillMaxWidth().clickable(onClick = onClick),
+        modifier = modifier.fillMaxWidth().clickable(
+            role = Role.Button,
+            onClickLabel = "Reproducir ${track.title}",
+            onClick = onClick,
+        ),
         shape = RoundedCornerShape(18.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
     ) {
@@ -152,7 +157,12 @@ fun MessageState(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
             Spacer(Modifier.height(8.dp))
-            Text(message, style = MaterialTheme.typography.bodyLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(
+                message,
+                style = MaterialTheme.typography.bodyLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+            )
             if (action != null) {
                 Spacer(Modifier.height(18.dp))
                 Button(onClick = onAction) { Text(action) }

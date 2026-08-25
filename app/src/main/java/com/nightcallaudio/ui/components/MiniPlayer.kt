@@ -27,7 +27,10 @@ fun MiniPlayer(
 ) {
     val track = state.currentTrack ?: return
     Surface(
-        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).clickable(onClick = onOpen),
+        modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).clickable(
+            onClickLabel = "Abrir reproductor de ${track.title}",
+            onClick = onOpen,
+        ),
         shape = RoundedCornerShape(18.dp),
         color = MaterialTheme.colorScheme.secondaryContainer,
         tonalElevation = 4.dp,

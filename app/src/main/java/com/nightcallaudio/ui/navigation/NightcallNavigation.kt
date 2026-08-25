@@ -66,6 +66,9 @@ fun NightcallNavigation(
             collectionsViewModel.clearError()
         }
     }
+    LaunchedEffect(playbackState.errorMessage) {
+        playbackState.errorMessage?.let { snackbarHostState.showSnackbar(it) }
+    }
 
     Scaffold(
         snackbarHost = { SnackbarHost(snackbarHostState) },
