@@ -4,7 +4,7 @@
     <style name="Theme.NightcallAudio" parent="android:Theme.Material.NoActionBar">
         <item name="android:fontFamily">sans</item>
         <item name="android:windowLightStatusBar">false</item>
-        <item name="android:navigationBarColor">#090A0F</item>
-        <item name="android:statusBarColor">#090A0F</item>
+        <item name="android:navigationBarColor">#04151D</item>
+        <item name="android:statusBarColor">#04151D</item>
     </style>
 </resources>
