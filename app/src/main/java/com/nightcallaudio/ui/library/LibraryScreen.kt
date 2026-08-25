@@ -70,7 +70,7 @@ fun LibraryScreen(
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             state.errorMessage != null -> MessageState("No se pudo cargar la biblioteca", state.errorMessage, action = "Reintentar", onAction = onRefresh)
-            state.tracks.isEmpty() -> MessageState("No hay música", "Añade canciones de al menos 30 segundos al dispositivo.")
+            state.tracks.isEmpty() -> MessageState("No hay música", "No se han encontrado canciones en el dispositivo")
             section == LibrarySection.TRACKS -> TrackList(
                 state.tracks,
                 { index -> onPlayTracks(state.tracks, index) },
