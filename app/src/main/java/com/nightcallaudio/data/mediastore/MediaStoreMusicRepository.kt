@@ -92,7 +92,8 @@ class MediaStoreMusicRepository(
                 while (cursor.moveToNext()) {
                     val location = cursor.getString(locationIndex)
                     val durationMs = cursor.getLong(durationIndex)
-                    if (!AudioInclusionPolicy.shouldInclude(durationMs, location)) continue
+                    val album = cursor.getString(albumIndex)
+                    if (!AudioInclusionPolicy.shouldInclude(durationMs, location, album)) continue
 
                     val id = cursor.getLong(idIndex)
                     val albumId = cursor.getLong(albumIdIndex).takeIf { it > 0 }
@@ -104,7 +105,7 @@ class MediaStoreMusicRepository(
                             title = cursor.getString(titleIndex).orUnknown("Título desconocido"),
                             artist = cursor.getString(artistIndex).orUnknown("Artista desconocido"),
                             artistId = cursor.getLong(artistIdIndex).takeIf { it > 0 },
-                            album = cursor.getString(albumIndex).orUnknown("Álbum desconocido"),
+                            album = album.orUnknown("Álbum desconocido"),
                             albumId = albumId,
                             artworkUri = albumId?.let(::albumArtworkUri),
                             durationMs = durationMs,

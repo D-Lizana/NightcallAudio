@@ -19,12 +19,25 @@ object AudioInclusionPolicy {
         "voice recorder",
         "voice recordings",
         "call recordings",
+        "whatsapp",
+        "whatsapp audio",
+        "whatsapp voice notes",
+        "whatsapp business",
+        "com.whatsapp",
+        "com.whatsapp.w4b",
     )
 
-    fun shouldInclude(durationMs: Long, location: String?): Boolean {
+    private val excludedAlbums = setOf(
+        "whatsapp audio",
+        "whatsapp voice notes",
+    )
+
+    fun shouldInclude(durationMs: Long, location: String?, album: String? = null): Boolean {
         if (durationMs < MINIMUM_DURATION_MS) return false
+        val normalizedAlbum = album?.trim()?.lowercase(Locale.ROOT)
+        if (normalizedAlbum in excludedAlbums) return false
         val normalized = location?.lowercase(Locale.ROOT) ?: return true
-        return normalized.split('/', '\\').none(excludedFolders::contains)
+        return normalized.split('/', '\\').map(String::trim).none(excludedFolders::contains)
     }
 
     fun folderName(location: String?, isRelativePath: Boolean): String? {

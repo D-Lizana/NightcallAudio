@@ -83,4 +83,40 @@ class RoomDatabaseTest {
 
         Assert.assertEquals(session, repository.observe().first())
     }
+
+    @Test
+    fun retirarCancionNormalizaLasPosicionesDePlaylist() = runBlocking {
+        val dao = database.playlistDao()
+        val playlistId = dao.insertPlaylist(
+            com.nightcallaudio.data.database.entity.PlaylistEntity(name = "Orden", createdAtEpochMs = 1, updatedAtEpochMs = 1),
+        )
+        dao.addTrack(playlistId, 10, 2)
+        dao.addTrack(playlistId, 20, 3)
+        dao.addTrack(playlistId, 30, 4)
+
+        Assert.assertTrue(dao.removeTrack(playlistId, 20, 5))
+
+        val remaining = dao.tracksOnce(playlistId)
+        Assert.assertEquals(listOf(10L, 30L), remaining.map { it.trackId })
+        Assert.assertEquals(listOf(0, 1), remaining.map { it.position })
+    }
+
+    @Test
+    fun limpiezaEliminaReferenciasAusentesDePlaylistsYFavoritos() = runBlocking {
+        val playlistDao = database.playlistDao()
+        val favoritesDao = database.favoritesDao()
+        val playlistId = playlistDao.insertPlaylist(
+            com.nightcallaudio.data.database.entity.PlaylistEntity(name = "Limpieza", createdAtEpochMs = 1, updatedAtEpochMs = 1),
+        )
+        playlistDao.addTrack(playlistId, 10, 2)
+        playlistDao.addTrack(playlistId, 20, 3)
+        favoritesDao.insert(FavoriteEntity(10, 1))
+        favoritesDao.insert(FavoriteEntity(20, 2))
+
+        playlistDao.cleanupMissingTracks(setOf(20))
+        favoritesDao.deleteMissing(setOf(20))
+
+        Assert.assertEquals(listOf(20L), playlistDao.tracksOnce(playlistId).map { it.trackId })
+        Assert.assertEquals(listOf(20L), favoritesDao.observeIds().first())
+    }
 }

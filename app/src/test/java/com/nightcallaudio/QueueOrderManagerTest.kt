@@ -85,6 +85,27 @@ class QueueOrderManagerTest {
         assertEquals(listOf(first, second, third), manager.tracks)
     }
 
+    @Test
+    fun `anadir al final durante shuffle conserva todas las instancias`() {
+        val manager = QueueOrderManager(Random(3))
+        manager.replace(listOf(first, second))
+        manager.setShuffleEnabled(true, 0)
+
+        manager.addToEnd(third, 0)
+        manager.setShuffleEnabled(false, 0)
+
+        assertEquals(listOf(first, second, third), manager.tracks)
+    }
+
+    @Test
+    fun `cola vacia usa indice menos uno`() {
+        val manager = QueueOrderManager(Random(1))
+        manager.replace(emptyList())
+
+        assertEquals(-1, manager.setShuffleEnabled(true, 4))
+        assertTrue(manager.tracks.isEmpty())
+    }
+
     private fun track(id: Long, title: String) = Track(
         id = id,
         contentUri = "content://audio/$id",
