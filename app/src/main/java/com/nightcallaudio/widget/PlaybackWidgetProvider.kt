@@ -77,7 +77,7 @@ object PlaybackWidgetUpdater {
         if (ids.isEmpty()) return
         val track = state.currentTrack
         val views = RemoteViews(context.packageName, R.layout.widget_playback).apply {
-            setTextViewText(R.id.widget_title, track?.title ?: "NightcallAudio")
+            setTextViewText(R.id.widget_title, track?.title ?: "Nightcall")
             setTextViewText(R.id.widget_artist, track?.artist ?: "Sin sesión activa")
             setViewVisibility(R.id.widget_controls, if (track == null) View.GONE else View.VISIBLE)
             setImageViewResource(R.id.widget_play_pause, if (state.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)

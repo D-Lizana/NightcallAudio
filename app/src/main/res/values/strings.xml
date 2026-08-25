@@ -1,7 +1,7 @@
 <resources>
-    <string name="app_name">NightcallAudio</string>
+    <string name="app_name">Nightcall</string>
     <string name="permission_audio_title">Acceso a tu música</string>
-    <string name="permission_audio_message">NightcallAudio necesita permiso para encontrar y reproducir los archivos de audio del dispositivo.</string>
+    <string name="permission_audio_message">Nightcall necesita permiso para encontrar y reproducir los archivos de audio del dispositivo.</string>
     <string name="permission_audio_action">Permitir acceso</string>
     <string name="navigation_library">Biblioteca</string>
     <string name="navigation_search">Buscar</string>
@@ -11,5 +11,5 @@
     <string name="queue_title">Cola de reproducción</string>
     <string name="playback_notification_channel">Reproducción multimedia</string>
     <string name="stop_playback_session">Detener</string>
-    <string name="widget_description">Controla la reproducción de NightcallAudio</string>
+    <string name="widget_description">Controla la reproducción de Nightcall</string>
 </resources>

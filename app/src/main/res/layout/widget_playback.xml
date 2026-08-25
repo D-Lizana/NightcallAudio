@@ -14,7 +14,7 @@
         android:layout_height="wrap_content"
         android:ellipsize="end"
         android:maxLines="1"
-        android:text="NightcallAudio"
+        android:text="Nightcall"
         android:textColor="#FFF5F1FF"
         android:textSize="16sp"
         android:textStyle="bold" />
