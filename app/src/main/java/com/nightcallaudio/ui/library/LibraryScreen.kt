@@ -42,11 +42,10 @@ fun LibraryScreen(
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
     Column(Modifier.fillMaxSize()) {
-        LargeTopAppBar(
+        TopAppBar(
             title = {
                 Column {
                     Text("Biblioteca", fontWeight = FontWeight.Bold)
-                    Text("Tu música local", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             },
         )
