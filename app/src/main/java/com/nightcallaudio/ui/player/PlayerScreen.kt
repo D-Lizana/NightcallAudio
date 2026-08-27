@@ -63,7 +63,20 @@ fun PlayerScreen(
             TopAppBar(
                 title = { Text("Reproduciendo") },
                 navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver") } },
-                actions = { IconButton(onClick = onOpenQueue) { Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Abrir cola") } },
+                actions = {
+                    if (track != null) {
+                        IconButton(onClick = onToggleFavorite) {
+                            Icon(
+                                if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
+                                if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
+                    }
+                    IconButton(onClick = onOpenQueue) {
+                        Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Abrir cola")
+                    }
+                },
             )
         },
     ) { padding ->
@@ -101,31 +114,7 @@ fun PlayerScreen(
             Spacer(Modifier.height(28.dp))
             Text(track.title, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.headlineSmall, fontWeight = FontWeight.Bold)
             Text(track.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            IconButton(onClick = onToggleFavorite) {
-                Icon(
-                    if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                    if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
-                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
             Spacer(Modifier.height(20.dp))
-            Slider(
-                value = sliderPosition.coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),
-                onValueChange = {
-                    isSeeking = true
-                    sliderPosition = it
-                },
-                onValueChangeFinished = {
-                    onSeek(sliderPosition.toLong())
-                    isSeeking = false
-                },
-                valueRange = 0f..state.durationMs.coerceAtLeast(1).toFloat(),
-            )
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(formatDuration(if (isSeeking) sliderPosition.toLong() else state.positionMs), style = MaterialTheme.typography.labelMedium)
-                Text(formatDuration(state.durationMs), style = MaterialTheme.typography.labelMedium)
-            }
-            Spacer(Modifier.height(12.dp))
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceAround) {
                 IconButton(onClick = onToggleShuffle) {
                     BadgedBox(badge = { if (state.shuffleEnabled) Badge { Text("✓") } }) {
@@ -166,6 +155,23 @@ fun PlayerScreen(
                 }
                 IconButton(onClick = onSeekForward) { Icon(Icons.Rounded.Forward10, "Avanzar 10 segundos") }
                 IconButton(onClick = onNext) { Icon(Icons.Rounded.SkipNext, "Siguiente") }
+            }
+            Spacer(Modifier.height(20.dp))
+            Slider(
+                value = sliderPosition.coerceIn(0f, state.durationMs.coerceAtLeast(1).toFloat()),
+                onValueChange = {
+                    isSeeking = true
+                    sliderPosition = it
+                },
+                onValueChangeFinished = {
+                    onSeek(sliderPosition.toLong())
+                    isSeeking = false
+                },
+                valueRange = 0f..state.durationMs.coerceAtLeast(1).toFloat(),
+            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                Text(formatDuration(if (isSeeking) sliderPosition.toLong() else state.positionMs), style = MaterialTheme.typography.labelMedium)
+                Text(formatDuration(state.durationMs), style = MaterialTheme.typography.labelMedium)
             }
             Spacer(Modifier.height(20.dp))
             }
