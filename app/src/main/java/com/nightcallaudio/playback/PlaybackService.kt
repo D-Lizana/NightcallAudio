@@ -1,5 +1,6 @@
 package com.nightcallaudio.playback
 
+import android.app.PendingIntent
 import android.content.Intent
 import android.os.Bundle
 import androidx.annotation.OptIn
@@ -15,6 +16,7 @@ import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.nightcallaudio.MainActivity
 import com.nightcallaudio.R
 import com.nightcallaudio.domain.usecase.PlaybackFailureAction
 import com.nightcallaudio.domain.usecase.PlaybackFailurePolicy
@@ -60,6 +62,7 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setCallback(SessionCallback())
             .setMediaButtonPreferences(listOf(stopButton))
+            .setSessionActivity(appLaunchPendingIntent())
             .build()
     }
 
@@ -86,6 +89,17 @@ class PlaybackService : MediaSessionService() {
         mediaSession = null
         super.onDestroy()
     }
+
+    private fun appLaunchPendingIntent(): PendingIntent = PendingIntent.getActivity(
+        this,
+        SESSION_ACTIVITY_REQUEST_CODE,
+        Intent(this, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            flags = Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+        },
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     private inner class SessionCallback : MediaSession.Callback {
         override fun onConnect(
@@ -119,5 +133,6 @@ class PlaybackService : MediaSessionService() {
     private companion object {
         const val SEEK_INCREMENT_MS = 10_000L
         const val NOTIFICATION_CHANNEL_ID = "nightcallaudio_playback"
+        const val SESSION_ACTIVITY_REQUEST_CODE = 100
     }
 }
