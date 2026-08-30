@@ -1,6 +1,7 @@
 package com.nightcallaudio.ui.library
 
 import androidx.lifecycle.ViewModel
+import com.nightcallaudio.ui.settings.DynamicMessages
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewModelScope
@@ -84,7 +85,7 @@ class LibraryViewModel(
                 }
                 .catch {
                     loading.value = false
-                    error.value = "No se ha podido leer la música del dispositivo."
+                    error.value = DynamicMessages.libraryReadFailed
                 }
                 .launchIn(viewModelScope)
         }
@@ -96,7 +97,7 @@ class LibraryViewModel(
                 .onSuccess {
                     sourceLibrary.value = it
                 }
-                .onFailure { error.value = "No se ha podido leer la música del dispositivo." }
+                .onFailure { error.value = DynamicMessages.libraryReadFailed }
             loading.value = false
         }
     }

@@ -15,6 +15,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import com.nightcallaudio.domain.model.PlaybackState
 
 @Composable
@@ -28,7 +30,7 @@ fun MiniPlayer(
     val track = state.currentTrack ?: return
     Surface(
         modifier = modifier.fillMaxWidth().padding(horizontal = 8.dp).clickable(
-            onClickLabel = "Abrir reproductor de ${track.title}",
+            onClickLabel = stringResource(R.string.open_player, track.title),
             onClick = onOpen,
         ),
         shape = RoundedCornerShape(18.dp),

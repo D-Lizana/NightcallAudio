@@ -21,6 +21,7 @@ import com.nightcallaudio.domain.usecase.PreviousAction
 import com.nightcallaudio.domain.usecase.PreviousButtonPolicy
 import com.nightcallaudio.domain.usecase.RestorePlaybackSessionUseCase
 import com.nightcallaudio.widget.PlaybackWidgetUpdater
+import com.nightcallaudio.ui.settings.DynamicMessages
 import kotlinx.coroutines.*
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -71,7 +72,7 @@ class PlaybackController(
 
                 override fun onPlayerError(error: PlaybackException) {
                     _state.value = _state.value.copy(
-                        errorMessage = "No se pudo reproducir la canción. Se intentará continuar con la cola.",
+                        errorMessage = DynamicMessages.playbackFailed,
                     )
                 }
             }
@@ -88,7 +89,7 @@ class PlaybackController(
     }
 
     override fun play(tracks: List<Track>, selectedIndex: Int) {
-        require(selectedIndex in tracks.indices) { "El índice seleccionado no pertenece a la cola" }
+        require(selectedIndex in tracks.indices) { DynamicMessages.invalidQueueIndex }
         queueOrder.replace(tracks)
         _state.value = PlaybackState(queue = tracks, currentIndex = selectedIndex, status = PlaybackStatus.BUFFERING)
         withController { controller ->
@@ -255,7 +256,7 @@ class PlaybackController(
         future.addListener(
             {
                 runCatching { action(future.get()) }.onFailure { error ->
-                    _state.value = _state.value.copy(errorMessage = error.message ?: "No se pudo conectar con el reproductor.")
+                    _state.value = _state.value.copy(errorMessage = error.message ?: DynamicMessages.playerConnectionFailed)
                     scheduleReconnect()
                 }
             },
@@ -270,7 +271,7 @@ class PlaybackController(
 
     private fun scheduleReconnect() {
         if (closed || reconnectJob?.isActive == true) return
-        _state.value = _state.value.copy(errorMessage = "Se ha perdido la conexión con el reproductor. Reconectando…")
+        _state.value = _state.value.copy(errorMessage = DynamicMessages.playerConnectionLost)
         reconnectJob = scope.launch {
             delay(RECONNECT_DELAY_MS)
             MediaController.releaseFuture(controllerFuture)

@@ -11,6 +11,7 @@ import android.widget.RemoteViews
 import com.nightcallaudio.MainActivity
 import com.nightcallaudio.NightcallAudioApplication
 import com.nightcallaudio.R
+import com.nightcallaudio.ui.settings.AppLanguageManager
 import com.nightcallaudio.domain.model.PlaybackState
 import com.nightcallaudio.domain.usecase.RestorePlaybackSessionUseCase
 import kotlinx.coroutines.CoroutineScope
@@ -79,7 +80,7 @@ object PlaybackWidgetUpdater {
         val launchAppIntent = activityIntent(context)
         val views = RemoteViews(context.packageName, R.layout.widget_playback).apply {
             setTextViewText(R.id.widget_title, track?.title ?: "Nightcall")
-            setTextViewText(R.id.widget_artist, track?.artist ?: "Sin sesión activa")
+            setTextViewText(R.id.widget_artist, track?.artist ?: AppLanguageManager.localizedContext(context).getString(R.string.widget_no_session))
             setViewVisibility(R.id.widget_controls, if (track == null) View.GONE else View.VISIBLE)
             setImageViewResource(R.id.widget_play_pause, if (state.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
             setOnClickPendingIntent(R.id.widget_content, launchAppIntent)

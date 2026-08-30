@@ -5,6 +5,7 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Bundle
+import android.content.Context
 import android.provider.Settings
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -27,8 +28,13 @@ import com.nightcallaudio.ui.collections.CollectionsViewModel
 import com.nightcallaudio.ui.navigation.NightcallNavigation
 import com.nightcallaudio.ui.permissions.AudioPermissionScreen
 import com.nightcallaudio.ui.theme.NightcallAudioTheme
+import com.nightcallaudio.ui.settings.AppLanguageManager
 
 class MainActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguageManager.localizedContext(newBase))
+    }
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()

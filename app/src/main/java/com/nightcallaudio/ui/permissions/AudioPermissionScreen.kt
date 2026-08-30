@@ -11,6 +11,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import com.nightcallaudio.permissions.AudioPermissionState
 
 @Composable
@@ -38,7 +40,7 @@ fun AudioPermissionScreen(
             }
             Spacer(Modifier.height(24.dp))
             Text(
-                if (permanentlyDenied) "Activa el acceso desde Ajustes" else "Acceso a tu música",
+                stringResource(if (permanentlyDenied) R.string.permission_settings_title else R.string.permission_audio_title),
                 style = MaterialTheme.typography.headlineSmall,
                 fontWeight = FontWeight.Bold,
                 textAlign = TextAlign.Center,
@@ -46,9 +48,9 @@ fun AudioPermissionScreen(
             Spacer(Modifier.height(12.dp))
             Text(
                 when (state) {
-                    AudioPermissionState.DENIED -> "Sin este permiso no podemos encontrar las canciones guardadas en el dispositivo. No se accederá a fotos ni a otros archivos."
-                    AudioPermissionState.PERMANENTLY_DENIED -> "Android ya no permite solicitar el permiso desde esta pantalla. Abre los ajustes de NightcallAudio y permite el acceso a música y audio."
-                    else -> "NightcallAudio necesita permiso para encontrar y reproducir los archivos de música del dispositivo. Los datos permanecerán en el teléfono."
+                    AudioPermissionState.DENIED -> stringResource(R.string.permission_denied_message)
+                    AudioPermissionState.PERMANENTLY_DENIED -> stringResource(R.string.permission_permanently_denied_message)
+                    else -> stringResource(R.string.permission_initial_message)
                 },
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -58,11 +60,11 @@ fun AudioPermissionScreen(
             Button(onClick = if (permanentlyDenied) onOpenSettings else onRequestPermission) {
                 Icon(if (permanentlyDenied) Icons.Rounded.Settings else Icons.Rounded.LibraryMusic, contentDescription = null)
                 Spacer(Modifier.width(8.dp))
-                Text(if (permanentlyDenied) "Abrir Ajustes" else "Permitir acceso")
+                Text(stringResource(if (permanentlyDenied) R.string.open_settings else R.string.permission_audio_action))
             }
             if (state == AudioPermissionState.DENIED) {
                 Spacer(Modifier.height(10.dp))
-                Text("Puedes cambiar esta decisión más adelante desde Ajustes.", style = MaterialTheme.typography.bodySmall)
+                Text(stringResource(R.string.permission_later), style = MaterialTheme.typography.bodySmall)
             }
         }
     }

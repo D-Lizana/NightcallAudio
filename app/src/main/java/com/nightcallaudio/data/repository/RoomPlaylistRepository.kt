@@ -3,6 +3,7 @@ package com.nightcallaudio.data.repository
 import com.nightcallaudio.data.database.dao.PlaylistDao
 import com.nightcallaudio.data.database.entity.PlaylistEntity
 import com.nightcallaudio.domain.model.Playlist
+import com.nightcallaudio.ui.settings.DynamicMessages
 import com.nightcallaudio.domain.repository.MusicRepository
 import com.nightcallaudio.domain.repository.PlaylistRepository
 import kotlinx.coroutines.flow.Flow
@@ -37,7 +38,7 @@ class RoomPlaylistRepository(
     override suspend fun rename(playlistId: Long, name: String) {
         val normalized = validatedName(name)
         require(dao.countByName(normalized, playlistId) == 0) { "Ya existe una playlist con ese nombre" }
-        require(dao.rename(playlistId, normalized, now()) == 1) { "La playlist no existe" }
+        require(dao.rename(playlistId, normalized, now()) == 1) { DynamicMessages.playlistMissing }
     }
 
     override suspend fun delete(playlistId: Long) {
@@ -56,8 +57,8 @@ class RoomPlaylistRepository(
 
     private fun validatedName(name: String): String {
         val normalized = name.trim()
-        require(normalized.isNotEmpty()) { "El nombre no puede estar vacío" }
-        require(normalized.length <= 80) { "El nombre no puede superar 80 caracteres" }
+        require(normalized.isNotEmpty()) { DynamicMessages.playlistNameRequired }
+        require(normalized.length <= 80) { DynamicMessages.playlistNameTooLong }
         return normalized
     }
 }

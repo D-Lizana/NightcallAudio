@@ -13,6 +13,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.model.Playlist
 import com.nightcallaudio.ui.components.MessageState
@@ -44,14 +46,14 @@ fun CollectionDetailScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = "Volver")
+                        Icon(Icons.AutoMirrored.Rounded.ArrowBack, contentDescription = stringResource(R.string.back_action))
                     }
                 },
             )
         },
     ) { padding ->
         if (tracks.isEmpty()) {
-            MessageState("Sin canciones", "Esta colección ya no contiene canciones disponibles.", Modifier.padding(padding))
+            MessageState(stringResource(R.string.no_songs), stringResource(R.string.collection_empty), Modifier.padding(padding))
         } else {
             TrackList(
                 tracks = tracks,

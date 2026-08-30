@@ -1,6 +1,7 @@
 package com.nightcallaudio.playback
 
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import androidx.annotation.OptIn
@@ -18,11 +19,16 @@ import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
 import com.nightcallaudio.MainActivity
 import com.nightcallaudio.R
+import com.nightcallaudio.ui.settings.AppLanguageManager
 import com.nightcallaudio.domain.usecase.PlaybackFailureAction
 import com.nightcallaudio.domain.usecase.PlaybackFailurePolicy
 
 @OptIn(markerClass = [UnstableApi::class])
 class PlaybackService : MediaSessionService() {
+    override fun attachBaseContext(newBase: Context) {
+        super.attachBaseContext(AppLanguageManager.localizedContext(newBase))
+    }
+
     private var mediaSession: MediaSession? = null
     private val player: Player?
         get() = mediaSession?.player

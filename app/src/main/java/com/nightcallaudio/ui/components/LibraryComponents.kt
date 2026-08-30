@@ -23,6 +23,8 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import coil3.compose.AsyncImage
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.model.Playlist
@@ -73,7 +75,7 @@ fun TrackRow(
     Card(
         modifier = modifier.fillMaxWidth().clickable(
             role = Role.Button,
-            onClickLabel = "Reproducir ${track.title}",
+            onClickLabel = stringResource(R.string.play_track, track.title),
             onClick = onClick,
         ),
         shape = RoundedCornerShape(18.dp),
@@ -90,7 +92,7 @@ fun TrackRow(
                     if (track.artworkUri != null) {
                         AsyncImage(
                             model = track.artworkUri,
-                            contentDescription = "Carátula de ${track.album}",
+                            contentDescription = stringResource(R.string.album_cover, track.album),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                         )
@@ -111,30 +113,30 @@ fun TrackRow(
             Text(formatDuration(track.durationMs), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             if (onPlayNext != null || onAddToQueue != null || onToggleFavorite != null || (playlists.isNotEmpty() && onAddToPlaylist != null)) {
                 Box {
-                    IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Rounded.MoreVert, "Más opciones") }
+                    IconButton(onClick = { menuExpanded = true }) { Icon(Icons.Rounded.MoreVert, stringResource(R.string.more_options)) }
                     DropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         if (onPlayNext != null) {
                             DropdownMenuItem(
-                                text = { Text("Reproducir a continuación") },
+                                text = { Text(stringResource(R.string.play_next)) },
                                 onClick = { menuExpanded = false; onPlayNext() },
                             )
                         }
                         if (onAddToQueue != null) {
                             DropdownMenuItem(
-                                text = { Text("Añadir al final de la cola") },
+                                text = { Text(stringResource(R.string.add_queue_end)) },
                                 onClick = { menuExpanded = false; onAddToQueue() },
                             )
                         }
                         if (onToggleFavorite != null) {
                             DropdownMenuItem(
-                                text = { Text(if (isFavorite == true) "Quitar de favoritos" else "Añadir a favoritos") },
+                                text = { Text(stringResource(if (isFavorite == true) R.string.remove_favorites else R.string.add_favorites)) },
                                 leadingIcon = { Icon(if (isFavorite == true) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder, null) },
                                 onClick = { menuExpanded = false; onToggleFavorite() },
                             )
                         }
                         if (onAddToPlaylist != null) playlists.forEach { playlist ->
                             DropdownMenuItem(
-                                text = { Text("Añadir a «${playlist.name}»") },
+                                text = { Text(stringResource(R.string.add_to_playlist, playlist.name)) },
                                 onClick = { menuExpanded = false; onAddToPlaylist(playlist.id) },
                             )
                         }

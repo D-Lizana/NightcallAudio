@@ -13,6 +13,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.Modifier
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import android.net.Uri
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavGraph.Companion.findStartDestination
@@ -30,14 +33,15 @@ import com.nightcallaudio.ui.library.CollectionDetailScreen
 import com.nightcallaudio.ui.player.PlayerScreen
 import com.nightcallaudio.ui.player.QueueScreen
 import com.nightcallaudio.ui.search.SearchScreen
+import com.nightcallaudio.ui.settings.SettingsScreen
 
-private data class MainDestination(val route: String, val label: String, val icon: ImageVector)
+private data class MainDestination(val route: String, @StringRes val label: Int, val icon: ImageVector)
 
 private val mainDestinations = listOf(
-    MainDestination("library", "Biblioteca", Icons.Rounded.LibraryMusic),
-    MainDestination("search", "Buscar", Icons.Rounded.Search),
-    MainDestination("playlists", "Playlists", Icons.AutoMirrored.Rounded.QueueMusic),
-    MainDestination("favorites", "Favoritos", Icons.Rounded.Favorite),
+    MainDestination("library", R.string.navigation_library, Icons.Rounded.LibraryMusic),
+    MainDestination("search", R.string.navigation_search, Icons.Rounded.Search),
+    MainDestination("playlists", R.string.navigation_playlists, Icons.AutoMirrored.Rounded.QueueMusic),
+    MainDestination("favorites", R.string.navigation_favorites, Icons.Rounded.Favorite),
 )
 
 @Composable
@@ -95,7 +99,7 @@ fun NightcallNavigation(
                                     }
                                 },
                                 icon = { Icon(destination.icon, contentDescription = null) },
-                                label = { Text(destination.label) },
+                                label = { Text(stringResource(destination.label)) },
                             )
                         }
                     }
@@ -117,14 +121,16 @@ fun NightcallNavigation(
                     collectionsState.playlists,
                     { collectionsViewModel.toggleFavorite(it.id) },
                     { playlistId, track -> collectionsViewModel.addTrack(playlistId, track.id) },
+                    { navController.navigate("settings") },
                 )
             }
+            composable("settings") { SettingsScreen(onBack = navController::navigateUp) }
             composable("artist/{artist}") { entry ->
                 val artist = Uri.decode(entry.arguments?.getString("artist").orEmpty())
                 val tracks = libraryState.tracks.filter { it.artist == artist }.sortedBy { it.title.lowercase() }
                 CollectionDetailScreen(
                     title = artist,
-                    subtitle = "Artista · ${tracks.size} canciones",
+                    subtitle = stringResource(R.string.artist_song_count, tracks.size),
                     tracks = tracks,
                     onBack = navController::navigateUp,
                     onPlayTracks = onPlayTracks,
@@ -144,7 +150,7 @@ fun NightcallNavigation(
                     .sortedWith(compareBy<Track>({ it.discNumber ?: 1 }, { it.trackNumber ?: Int.MAX_VALUE }, { it.title.lowercase() }))
                 CollectionDetailScreen(
                     title = album,
-                    subtitle = "$artist · ${tracks.size} canciones",
+                    subtitle = stringResource(R.string.album_song_count, artist, tracks.size),
                     tracks = tracks,
                     onBack = navController::navigateUp,
                     onPlayTracks = onPlayTracks,

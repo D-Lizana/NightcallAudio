@@ -5,24 +5,31 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material3.*
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Settings
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import com.nightcallaudio.ui.components.MessageState
 import com.nightcallaudio.ui.components.TrackList
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.model.Playlist
 
-private enum class LibrarySection(val label: String) {
-    TRACKS("Canciones"),
-    ARTISTS("Artistas"),
-    ALBUMS("Álbumes"),
-    GENRES("Géneros"),
-    FOLDERS("Carpetas"),
-}
+private enum class LibrarySection { TRACKS, ARTISTS, ALBUMS, GENRES, FOLDERS }
+
+@Composable
+private fun LibrarySection.label() = stringResource(when (this) {
+    LibrarySection.TRACKS -> R.string.library_tracks
+    LibrarySection.ARTISTS -> R.string.library_artists
+    LibrarySection.ALBUMS -> R.string.library_albums
+    LibrarySection.GENRES -> R.string.library_genres
+    LibrarySection.FOLDERS -> R.string.library_folders
+})
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -38,6 +45,7 @@ fun LibraryScreen(
     playlists: List<Playlist>,
     onToggleFavorite: (Track) -> Unit,
     onAddToPlaylist: (Long, Track) -> Unit,
+    onOpenSettings: () -> Unit,
 ) {
     var section by rememberSaveable { mutableStateOf(LibrarySection.TRACKS) }
     var selectedCategory by rememberSaveable { mutableStateOf<String?>(null) }
@@ -45,9 +53,10 @@ fun LibraryScreen(
         TopAppBar(
             title = {
                 Column {
-                    Text("Biblioteca", fontWeight = FontWeight.Bold)
+                    Text(stringResource(R.string.navigation_library), fontWeight = FontWeight.Bold)
                 }
             },
+            actions = { IconButton(onClick = onOpenSettings) { Icon(Icons.Rounded.Settings, stringResource(R.string.settings_title)) } },
         )
         LazyRow(
             modifier = Modifier.fillMaxWidth(),
@@ -61,15 +70,15 @@ fun LibraryScreen(
                         section = item
                         selectedCategory = null
                     },
-                    label = { Text(item.label) },
+                    label = { Text(item.label()) },
                 )
             }
         }
         Spacer(Modifier.height(10.dp))
         when {
             state.isLoading -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            state.errorMessage != null -> MessageState("No se pudo cargar la biblioteca", state.errorMessage, action = "Reintentar", onAction = onRefresh)
-            state.tracks.isEmpty() -> MessageState("No hay música", "No se han encontrado canciones en el dispositivo")
+            state.errorMessage != null -> MessageState(stringResource(R.string.library_load_failed), state.errorMessage, action = stringResource(R.string.retry_action), onAction = onRefresh)
+            state.tracks.isEmpty() -> MessageState(stringResource(R.string.no_music), stringResource(R.string.no_songs_device))
             section == LibrarySection.TRACKS -> TrackList(
                 state.tracks,
                 { index -> onPlayTracks(state.tracks, index) },
@@ -82,7 +91,7 @@ fun LibraryScreen(
                 val categoryTracks = state.tracks.forCategory(section, selectedCategory.orEmpty())
                 Column(Modifier.fillMaxSize()) {
                     TextButton(onClick = { selectedCategory = null }, modifier = Modifier.padding(horizontal = 8.dp)) {
-                        Text("‹ ${section.label} · ${selectedCategory.orEmpty()}")
+                        Text("‹ ${section.label()} · ${selectedCategory.orEmpty()}")
                     }
                     TrackList(
                         categoryTracks,
@@ -123,7 +132,7 @@ private fun CategoryPreview(
         LibrarySection.TRACKS -> emptyList()
     }
     if (entries.isEmpty()) {
-        MessageState("Sin ${section.label.lowercase()}", "No hay información disponible para esta categoría.")
+        MessageState(stringResource(R.string.no_category, section.label().lowercase()), stringResource(R.string.no_category_information))
     } else {
         androidx.compose.foundation.lazy.LazyColumn(
             modifier = Modifier.fillMaxSize(),
@@ -140,7 +149,7 @@ private fun CategoryPreview(
                                 Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             }
                         }
-                        Text("${entry.trackCount} canciones", style = MaterialTheme.typography.labelMedium)
+                        Text(stringResource(R.string.song_count, entry.trackCount), style = MaterialTheme.typography.labelMedium)
                     }
                 }
             }

@@ -1,6 +1,7 @@
 package com.nightcallaudio.ui.collections
 
 import androidx.lifecycle.ViewModel
+import com.nightcallaudio.ui.settings.DynamicMessages
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.CreationExtras
 import androidx.lifecycle.viewModelScope
@@ -38,7 +39,7 @@ class CollectionsViewModel(
     fun rename(id: Long, name: String) = execute { playlists.rename(id, name) }
     fun delete(id: Long) = execute { playlists.delete(id) }
     fun addTrack(playlistId: Long, trackId: Long) = execute {
-        if (!playlists.addTrack(playlistId, trackId)) error.value = "La canción ya está en esa playlist."
+        if (!playlists.addTrack(playlistId, trackId)) error.value = DynamicMessages.duplicatePlaylistTrack
     }
     fun removeTrack(playlistId: Long, trackId: Long) = execute { playlists.removeTrack(playlistId, trackId) }
     fun moveTrack(playlistId: Long, from: Int, to: Int) = execute { playlists.moveTrack(playlistId, from, to) }
@@ -51,7 +52,7 @@ class CollectionsViewModel(
         viewModelScope.launch {
             error.value = null
             runCatching { block() }.onFailure {
-                error.value = it.message ?: "No se pudo completar la operación."
+                error.value = it.message ?: DynamicMessages.operationFailed
             }
         }
     }

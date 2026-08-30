@@ -8,6 +8,8 @@ import android.os.Build
 import android.os.Handler
 import android.os.Looper
 import android.provider.MediaStore
+import com.nightcallaudio.R
+import com.nightcallaudio.ui.settings.AppLanguageManager
 import com.nightcallaudio.domain.model.Track
 import com.nightcallaudio.domain.repository.MusicRepository
 import com.nightcallaudio.domain.usecase.AudioInclusionPolicy
@@ -24,6 +26,7 @@ import kotlinx.coroutines.withContext
 class MediaStoreMusicRepository(
     context: Context,
 ) : MusicRepository {
+    private val appContext = context.applicationContext
     private val resolver = context.applicationContext.contentResolver
 
     override fun observeTracks(): Flow<List<Track>> = callbackFlow {
@@ -102,10 +105,10 @@ class MediaStoreMusicRepository(
                         Track(
                             id = id,
                             contentUri = ContentUris.withAppendedId(collection, id).toString(),
-                            title = cursor.getString(titleIndex).orUnknown("Título desconocido"),
-                            artist = cursor.getString(artistIndex).orUnknown("Artista desconocido"),
+                            title = cursor.getString(titleIndex).orUnknown(localizedString(R.string.unknown_title)),
+                            artist = cursor.getString(artistIndex).orUnknown(localizedString(R.string.unknown_artist)),
                             artistId = cursor.getLong(artistIdIndex).takeIf { it > 0 },
-                            album = album.orUnknown("Álbum desconocido"),
+                            album = album.orUnknown(localizedString(R.string.unknown_album)),
                             albumId = albumId,
                             artworkUri = albumId?.let(::albumArtworkUri),
                             durationMs = durationMs,
@@ -124,6 +127,9 @@ class MediaStoreMusicRepository(
             }.distinctBy(Track::contentUri)
         }.orEmpty()
     }
+
+    private fun localizedString(resourceId: Int) =
+        AppLanguageManager.localizedContext(appContext).getString(resourceId)
 
     private fun loadGenresByTrackId(): Map<Long, String> {
         val genres = mutableMapOf<Long, String>()

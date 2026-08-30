@@ -23,6 +23,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.res.stringResource
+import com.nightcallaudio.R
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.customActions
@@ -61,27 +63,27 @@ fun PlayerScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Reproduciendo") },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver") } },
+                title = { Text(stringResource(R.string.player_title)) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back_action)) } },
                 actions = {
                     if (track != null) {
                         IconButton(onClick = onToggleFavorite) {
                             Icon(
                                 if (isFavorite) Icons.Rounded.Favorite else Icons.Rounded.FavoriteBorder,
-                                if (isFavorite) "Quitar de favoritos" else "Añadir a favoritos",
+                                stringResource(if (isFavorite) R.string.remove_favorites else R.string.add_favorites),
                                 tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }
                     IconButton(onClick = onOpenQueue) {
-                        Icon(Icons.AutoMirrored.Rounded.QueueMusic, "Abrir cola")
+                        Icon(Icons.AutoMirrored.Rounded.QueueMusic, stringResource(R.string.open_queue))
                     }
                 },
             )
         },
     ) { padding ->
         if (track == null) {
-            MessageState("Nada en reproducción", "Selecciona una canción de tu biblioteca.", Modifier.padding(padding))
+            MessageState(stringResource(R.string.nothing_playing), stringResource(R.string.select_song), Modifier.padding(padding))
             return@Scaffold
         }
         BoxWithConstraints(Modifier.fillMaxSize().padding(padding)) {
@@ -104,7 +106,7 @@ fun PlayerScreen(
                     if (track.artworkUri != null) {
                         AsyncImage(
                             model = track.artworkUri,
-                            contentDescription = "Carátula de ${track.album}",
+                            contentDescription = stringResource(R.string.album_cover, track.album),
                             modifier = Modifier.fillMaxSize(),
                             contentScale = ContentScale.Crop,
                         )
@@ -120,7 +122,7 @@ fun PlayerScreen(
                     BadgedBox(badge = { if (state.shuffleEnabled) Badge { Text("✓") } }) {
                         Icon(
                             Icons.Rounded.Shuffle,
-                            if (state.shuffleEnabled) "Aleatorio activado. Desactivar" else "Aleatorio desactivado. Activar",
+                            stringResource(if (state.shuffleEnabled) R.string.shuffle_on else R.string.shuffle_off),
                             tint = if (state.shuffleEnabled) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -130,9 +132,9 @@ fun PlayerScreen(
                         Icon(
                             if (state.repeatMode == RepeatMode.ONE) Icons.Rounded.RepeatOne else Icons.Rounded.Repeat,
                             when (state.repeatMode) {
-                                RepeatMode.OFF -> "Repetición desactivada. Activar repetición de cola"
-                                RepeatMode.ALL -> "Repetición de cola activada. Activar repetición de canción"
-                                RepeatMode.ONE -> "Repetición de canción activada. Desactivar"
+                                RepeatMode.OFF -> stringResource(R.string.repeat_off)
+                                RepeatMode.ALL -> stringResource(R.string.repeat_all)
+                                RepeatMode.ONE -> stringResource(R.string.repeat_one)
                             },
                             tint = if (state.repeatMode == RepeatMode.OFF) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.primary,
                         )
@@ -191,13 +193,13 @@ fun QueueScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Cola de reproducción", fontWeight = FontWeight.Bold) },
-                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, "Volver") } },
+                title = { Text(stringResource(R.string.queue_title), fontWeight = FontWeight.Bold) },
+                navigationIcon = { IconButton(onClick = onBack) { Icon(Icons.AutoMirrored.Rounded.ArrowBack, stringResource(R.string.back_action)) } },
             )
         },
     ) { padding ->
         if (state.queue.isEmpty()) {
-            MessageState("La cola está vacía", "Selecciona música para empezar.", Modifier.padding(padding))
+            MessageState(stringResource(R.string.empty_queue), stringResource(R.string.select_music), Modifier.padding(padding))
         } else {
             androidx.compose.foundation.lazy.LazyColumn(
                 Modifier.padding(padding).padding(horizontal = 16.dp),
