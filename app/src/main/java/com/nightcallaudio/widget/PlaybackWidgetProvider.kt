@@ -76,12 +76,15 @@ object PlaybackWidgetUpdater {
         val ids = manager.getAppWidgetIds(component)
         if (ids.isEmpty()) return
         val track = state.currentTrack
+        val launchAppIntent = activityIntent(context)
         val views = RemoteViews(context.packageName, R.layout.widget_playback).apply {
             setTextViewText(R.id.widget_title, track?.title ?: "Nightcall")
             setTextViewText(R.id.widget_artist, track?.artist ?: "Sin sesión activa")
             setViewVisibility(R.id.widget_controls, if (track == null) View.GONE else View.VISIBLE)
             setImageViewResource(R.id.widget_play_pause, if (state.isPlaying) android.R.drawable.ic_media_pause else android.R.drawable.ic_media_play)
-            setOnClickPendingIntent(R.id.widget_content, activityIntent(context))
+            setOnClickPendingIntent(R.id.widget_content, launchAppIntent)
+            setOnClickPendingIntent(R.id.widget_title, launchAppIntent)
+            setOnClickPendingIntent(R.id.widget_artist, launchAppIntent)
             setOnClickPendingIntent(R.id.widget_previous, commandIntent(context, WidgetCommand.PREVIOUS))
             setOnClickPendingIntent(R.id.widget_play_pause, commandIntent(context, WidgetCommand.PLAY_PAUSE))
             setOnClickPendingIntent(R.id.widget_next, commandIntent(context, WidgetCommand.NEXT))
@@ -89,12 +92,21 @@ object PlaybackWidgetUpdater {
         manager.updateAppWidget(ids, views)
     }
 
-    private fun activityIntent(context: Context): PendingIntent = PendingIntent.getActivity(
-        context,
-        0,
-        Intent(context, MainActivity::class.java),
-        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-    )
+    private fun activityIntent(context: Context): PendingIntent {
+        val intent = Intent(context, MainActivity::class.java).apply {
+            action = Intent.ACTION_MAIN
+            addCategory(Intent.CATEGORY_LAUNCHER)
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or
+                Intent.FLAG_ACTIVITY_CLEAR_TOP or
+                Intent.FLAG_ACTIVITY_SINGLE_TOP
+        }
+        return PendingIntent.getActivity(
+            context,
+            APP_ACTIVITY_REQUEST_CODE,
+            intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+    }
 
     private fun commandIntent(context: Context, command: WidgetCommand): PendingIntent = PendingIntent.getBroadcast(
         context,
@@ -102,6 +114,8 @@ object PlaybackWidgetUpdater {
         Intent(context, PlaybackWidgetProvider::class.java).setAction(command.action),
         PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
     )
+
+    private const val APP_ACTIVITY_REQUEST_CODE = 100
 }
 
 private enum class WidgetCommand(val action: String) {
