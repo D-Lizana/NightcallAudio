@@ -19,8 +19,10 @@ MediaStore y todos los datos creados por el usuario permanecen en el dispositivo
 No utiliza servidores, servicios de streaming, cuentas ni sincronización en la
 nube.
 
-La aplicación está diseñada en español, utiliza un tema oscuro inspirado en su
-identidad visual neón y es compatible desde Android 8.0 Oreo (API 26).
+La interfaz está disponible en español e inglés, utiliza un tema oscuro inspirado
+en su identidad visual neón y es compatible desde Android 8.0 Oreo (API 26). El
+español es el idioma predeterminado y la selección del usuario se conserva entre
+ejecuciones.
 
 ## Funciones principales
 
@@ -40,6 +42,8 @@ identidad visual neón y es compatible desde Android 8.0 Oreo (API 26).
 - Widget con pista actual, anterior, reproducir/pausar y siguiente.
 - Carátulas de álbum obtenidas desde la biblioteca del dispositivo.
 - Tema oscuro con acentos rosa neón, cian petróleo y coral.
+- Pantalla de ajustes accesible desde el icono de rueda dentada de la Biblioteca.
+- Selector persistente de idioma entre español e inglés.
 
 ## Selección de archivos
 
@@ -162,8 +166,9 @@ Ejecuta el análisis estático:
 ```
 
 Las pruebas cubren, entre otros aspectos, filtros de audio, biblioteca, permisos,
-reglas de reproducción, orden de la cola, restauración de sesiones y persistencia
-con Room. Las pruebas instrumentadas requieren un emulador o dispositivo conectado.
+reglas de reproducción, orden de la cola, restauración de sesiones, persistencia
+con Room y selección de los mensajes dinámicos según el idioma activo. Las pruebas
+instrumentadas requieren un emulador o dispositivo conectado.
 
 ## Estado y planificación
 
