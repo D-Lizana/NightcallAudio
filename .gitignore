@@ -12,4 +12,8 @@
 /captures
 .externalNativeBuild
 .cxx
+
+# Imagen de referencia pendiente de revisar sus derechos de uso
+/docs/assets/nightcall_launcher_master.jpg
+/docs/assets/nightcall_launcher_master.png
 local.properties

@@ -1,6 +1,4 @@
 <div align="center">
-  <img src="docs/assets/nightcall_launcher_master.jpg" alt="Logotipo de Nightcall" width="220">
-
   # Nightcall
 
   Reproductor de música local para Android, privado, sin cuentas y sin conexión.
