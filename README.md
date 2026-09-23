@@ -15,9 +15,9 @@
 
 Nightcall es una aplicación nativa para reproducir y organizar la música guardada
 en un dispositivo Android. La biblioteca se obtiene directamente mediante
-MediaStore y todos los datos creados por el usuario permanecen en el dispositivo.
-No utiliza servidores, servicios de streaming, cuentas ni sincronización en la
-nube.
+MediaStore y la aplicación no transmite la biblioteca ni los datos creados por el
+usuario. No utiliza servidores propios, servicios de streaming, cuentas ni
+sincronización en la nube.
 
 La interfaz está disponible en español e inglés, utiliza un tema oscuro inspirado
 en su identidad visual neón y es compatible desde Android 8.0 Oreo (API 26). El
@@ -65,6 +65,9 @@ La aplicación no elimina, renombra ni modifica los archivos o sus metadatos.
 - Playlists, favoritos y sesión de reproducción se almacenan localmente con Room.
 - Los permisos de audio se utilizan exclusivamente para leer y reproducir los
   archivos musicales del dispositivo.
+- Android puede aplicar sus mecanismos de copia de seguridad o transferencia de
+  aplicaciones según la versión del sistema y la configuración de la cuenta del
+  dispositivo; Nightcall no inicia ni controla una sincronización propia.
 
 ## Requisitos
 
@@ -83,7 +86,7 @@ en el dispositivo Android.
 1. Clona el repositorio:
 
    ```bash
-   git clone <URL_DEL_REPOSITORIO>
+   git clone https://github.com/D-Lizana/NightcallAudio.git
    cd NightcallAudio
    ```
 
@@ -176,6 +179,9 @@ El alcance, las decisiones funcionales y las fases del desarrollo se encuentran 
 el [plan de trabajo](docs/Plan_Trabajo_NightcallAudio.md). La aplicación no incluye
 Android Auto, Wear OS específico, ecualizador, temporizador, edición de metadatos,
 streaming ni importación o exportación de playlists.
+
+La configuración actual identifica la aplicación como versión `1.0`
+(`versionCode = 1`), compatible desde Android 8.0/API 26 y con API objetivo 37.
 
 ## Licencia
 
